@@ -32,10 +32,9 @@ export function AppSidebar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const isWorkspaceRoute =
     pathname === "/dashboard" ||
-    pathname === "/user" ||
-    pathname === "/department" ||
-    pathname === "/employee" ||
-    pathname === "/audit-log" ||
+    pathname === "/users" ||
+    pathname === "/departments" ||
+    pathname === "/employees" ||
     pathname === "/audit-logs" ||
     pathname === "/api-documentation";
   const isRoleRoute = pathname === "/roles";
@@ -78,8 +77,8 @@ export function AppSidebar() {
             {isAdmin && (
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  render={<Link href="/user" />}
-                  isActive={pathname === "/user"}
+                  render={<Link href="/users" />}
+                  isActive={pathname === "/users"}
                 >
                   <UsersRound aria-hidden="true" />
                   <span>Users</span>
@@ -99,8 +98,8 @@ export function AppSidebar() {
             )}
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link href="/department" />}
-                isActive={pathname === "/department"}
+                render={<Link href="/departments" />}
+                isActive={pathname === "/departments"}
               >
                 <UserGroup aria-hidden="true" />
                 <span>Departments</span>
@@ -108,11 +107,11 @@ export function AppSidebar() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link href="/employee" />}
-                isActive={pathname === "/employee"}
+                render={<Link href="/employees" />}
+                isActive={pathname === "/employees"}
               >
                 <IdCardLanyard aria-hidden="true" />
-                <span>Employee</span>
+                <span>Employees</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -124,9 +123,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link href="/audit-logs" />}
-                isActive={
-                  pathname === "/audit-log" || pathname === "/audit-logs"
-                }
+                isActive={pathname === "/audit-logs"}
               >
                 <ClipboardMinus aria-hidden="true" />
                 <span>Audit Log</span>

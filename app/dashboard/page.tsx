@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ArrowUpRight,
   Building2,
-  CheckCircle2,
   Plus,
-  ShieldCheck,
-  UsersRound,
 } from "lucide-react";
 import {
   Bar,
@@ -66,32 +63,17 @@ function activityLabel(action: string, entity: string) {
 }
 
 export default function DashboardPage() {
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDashboard() {
-      try {
-        const data = await getDashboard();
-        if (!cancelled) setDashboard(data);
-      } catch (requestError) {
-        if (!cancelled) {
-          setError(
-            requestError instanceof ApiError
-              ? requestError.message
-              : "Unable to load dashboard data.",
-          );
-        }
-      }
-    }
-
-    void loadDashboard();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const dashboardQuery = useQuery<DashboardData>({
+    queryKey: ["dashboard"],
+    queryFn: getDashboard,
+  });
+  const dashboard = dashboardQuery.data;
+  const error =
+    dashboardQuery.error instanceof ApiError
+      ? dashboardQuery.error.message
+      : dashboardQuery.error
+        ? "Unable to load dashboard data."
+        : "";
 
   if (error) {
     return (
@@ -184,12 +166,6 @@ export default function DashboardPage() {
       fill: "var(--color-inactive)",
     },
   ];
-  const activePercentage = dashboard.employee_status.total
-    ? Math.round(
-        (dashboard.active_employees / dashboard.employee_status.total) * 100,
-      )
-    : 0;
-
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">

@@ -22,10 +22,9 @@ export function Header() {
 
   const showSidebar =
     pathname === "/dashboard" ||
-    pathname === "/user" ||
-    pathname === "/department" ||
-    pathname === "/employee" ||
-    pathname === "/audit-log" ||
+    pathname === "/users" ||
+    pathname === "/departments" ||
+    pathname === "/employees" ||
     pathname === "/audit-logs" ||
     pathname === "/api-documentation" ||
     pathname === "/roles";
@@ -100,10 +99,9 @@ export function Header() {
   const userLabel = userEmail ?? (userLoadError ? "Unavailable" : "Loading...");
   const breadcrumb = {
     "/dashboard": { section: "Overview", label: "Dashboard" },
-    "/user": { section: "Management", label: "Users" },
-    "/department": { section: "Management", label: "Departments" },
-    "/employee": { section: "Management", label: "Employees" },
-    "/audit-log": { section: "Other", label: "Audit Log" },
+    "/users": { section: "Management", label: "Users" },
+    "/departments": { section: "Management", label: "Departments" },
+    "/employees": { section: "Management", label: "Employees" },
     "/audit-logs": { section: "Other", label: "Audit Log" },
     "/api-documentation": { section: "Other", label: "API Docs" },
     "/roles": { section: "Management", label: "Roles" },
@@ -124,7 +122,7 @@ export function Header() {
                   breadcrumb.section === "Overview"
                     ? "/dashboard"
                     : breadcrumb.section === "Management"
-                      ? "/user"
+                      ? "/users"
                       : "/audit-logs"
                 }
                 className="text-muted-foreground transition-colors hover:text-foreground"

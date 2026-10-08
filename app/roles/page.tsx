@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -108,13 +109,10 @@ function StatusBadge({ active }: { active: boolean }) {
 }
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<Role[]>([]);
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [selected, setSelected] = useState<Role | null>(null);
   const [editing, setEditing] = useState<Role | null>(null);
@@ -132,10 +130,9 @@ export default function RolesPage() {
       .catch(() => setCurrentUserRole(null));
   }, []);
 
-  const loadRoles = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
+  const rolesQuery = useQuery({
+    queryKey: ["roles", page, query, sortAsc],
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         per_page: String(pageSize),
@@ -147,9 +144,9 @@ export default function RolesPage() {
         `/roles?${params}`,
       );
       const items = getRoleItems(response.data);
-      setRoles(items.map(normalizeRole));
-      setTotal(
-        getPaginationTotal(
+      return {
+        roles: items.map(normalizeRole),
+        total: getPaginationTotal(
           response.metadata,
           Array.isArray(response.data)
             ? items.length
@@ -157,24 +154,18 @@ export default function RolesPage() {
                 response.data.total_count ??
                 items.length),
         ),
-      );
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : "Unable to load roles.",
-      );
-      setRoles([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, query, sortAsc]);
+      };
+    },
+  });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => void loadRoles(), 250);
-    return () => window.clearTimeout(timer);
-  }, [loadRoles]);
+  const roles = rolesQuery.data?.roles ?? [];
+  const total = rolesQuery.data?.total ?? 0;
+  const loading = rolesQuery.isLoading;
+  const error = rolesQuery.error
+    ? rolesQuery.error instanceof ApiError
+      ? rolesQuery.error.message
+      : "Unable to load roles."
+    : "";
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -227,7 +218,7 @@ export default function RolesPage() {
       }
       setFormOpen(false);
       showSuccess(editing ? "Role updated" : "Role created");
-      await loadRoles();
+      await queryClient.invalidateQueries({ queryKey: ["roles"] });
     } catch (requestError) {
       showError(
         "Unable to save role",
@@ -246,7 +237,7 @@ export default function RolesPage() {
       setDeleteTarget(null);
       setSelected(null);
       showSuccess("Role deleted");
-      await loadRoles();
+      await queryClient.invalidateQueries({ queryKey: ["roles"] });
     } catch (requestError) {
       showError(
         "Unable to delete role",
@@ -263,14 +254,10 @@ export default function RolesPage() {
     setUpdatingStatusId(role.id);
     try {
       await api.patch(`/roles/${role.id}/status`, { status });
-      setRoles((currentRoles) =>
-        currentRoles.map((item) =>
-          item.id === role.id ? { ...item, status } : item,
-        ),
-      );
       if (selected?.id === role.id) {
         setSelected({ ...selected, status });
       }
+      await queryClient.invalidateQueries({ queryKey: ["roles"] });
       showSuccess(`Role ${status ? "activated" : "deactivated"}`);
     } catch (requestError) {
       showError(
@@ -312,7 +299,7 @@ export default function RolesPage() {
       </div>
 
       <Card>
-        <CardHeader className="gap-4">
+        <CardHeader className="gap-4 border-b">
           <div>
             <CardTitle>Role list</CardTitle>
             <CardDescription>View and manage access roles.</CardDescription>

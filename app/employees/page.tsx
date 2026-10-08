@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -85,10 +86,15 @@ const positions = [
   "Product Manager",
 ];
 
-type EmployeeApi = Omit<Employee, "id" | "department"> & {
+type EmployeeApi = Omit<
+  Employee,
+  "id" | "department" | "position" | "address"
+> & {
   id: string | number;
-  department?: string;
-  department_name?: string;
+  department?: string | { id?: string | number; name?: string };
+  department_name?: string | { name?: string };
+  position?: string | { name?: string };
+  address?: string | { name?: string; address?: string };
 };
 
 type EmployeeListData =
@@ -102,12 +108,31 @@ type EmployeeListData =
     };
 
 function normalizeEmployee(value: EmployeeApi): Employee {
+  const departmentName =
+    typeof value.department === "string"
+      ? value.department
+      : value.department?.name ??
+        (typeof value.department_name === "string"
+          ? value.department_name
+          : value.department_name?.name) ??
+        "";
+  const departmentId =
+    value.department_id ??
+    (typeof value.department === "object" ? value.department.id : undefined) ??
+    "";
+
   return {
     ...value,
     id: String(value.id),
+    department_id: String(departmentId),
     phone_number: value.phone_number ?? "",
-    address: value.address ?? "",
-    department: value.department ?? value.department_name ?? "",
+    address:
+      typeof value.address === "string"
+        ? value.address
+        : value.address?.address ?? value.address?.name ?? "",
+    department: departmentName,
+    position:
+      typeof value.position === "string" ? value.position : value.position?.name ?? "",
   };
 }
 
@@ -190,23 +215,17 @@ function StatusToggle({
 }
 
 export default function EmployeePage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [sortBy, setSortBy] = useState("first_name");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
-  const [departmentOptions, setDepartmentOptions] = useState<
-    DepartmentOption[]
-  >([]);
   const [hireDateFrom, setHireDateFrom] = useState("");
   const [hireDateTo, setHireDateTo] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterError, setFilterError] = useState("");
   const [selected, setSelected] = useState<Employee | null>(null);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
@@ -215,6 +234,7 @@ export default function EmployeePage() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
   const pageSize = 5;
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     void getMe()
@@ -222,38 +242,29 @@ export default function EmployeePage() {
       .catch(() => setCurrentUserRole(null));
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
+  const departmentQuery = useQuery({
+    queryKey: ["employee-departments"],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<DepartmentOption[]>>(
+        "/employees/get-all-departments",
+      );
+      return response.data;
+    },
+  });
 
-    async function loadDepartmentOptions() {
-      try {
-        const response = await api.get<ApiResponse<DepartmentOption[]>>(
-          "/employees/get-all-departments",
-        );
-        if (!cancelled) {
-          setDepartmentOptions(response.data);
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setActionError(
-            requestError instanceof ApiError
-              ? requestError.message
-              : "Unable to load departments.",
-          );
-        }
-      }
-    }
-
-    void loadDepartmentOptions();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const loadEmployees = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
+  const employeeQuery = useQuery({
+    queryKey: [
+      "employees",
+      page,
+      query,
+      statusFilter,
+      departmentFilter,
+      sortBy,
+      sortAsc,
+      hireDateFrom,
+      hireDateTo,
+    ],
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         per_page: String(pageSize),
@@ -267,52 +278,68 @@ export default function EmployeePage() {
         params.set("department_id", departmentFilter);
       if (hireDateFrom) params.set("hire_date_from", hireDateFrom);
       if (hireDateTo) params.set("hire_date_to", hireDateTo);
-      const response = await api.get<ApiResponse<EmployeeListData>>(
+      return api.get<ApiResponse<EmployeeListData>>(
         `/employees?${params}`,
       );
-      const data = response.data;
-      const items = Array.isArray(data)
-        ? data
-        : (data.items ?? data.results ?? data.employees ?? []);
-      setEmployees(items.map(normalizeEmployee));
-      setTotal(
-        getPaginationTotal(
-          response.metadata,
-          Array.isArray(data)
-            ? items.length
-            : (data.total ?? data.total_count ?? items.length),
-        ),
-      );
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : "Unable to load employees.",
-      );
-      setEmployees([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    departmentFilter,
-    hireDateFrom,
-    hireDateTo,
-    page,
-    query,
-    sortAsc,
-    sortBy,
-    statusFilter,
-  ]);
+    },
+    placeholderData: (previousData) => previousData,
+  });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => void loadEmployees(), 250);
-    return () => window.clearTimeout(timer);
-  }, [loadEmployees]);
+  const data = employeeQuery.data?.data;
+  const rawEmployees = data
+    ? Array.isArray(data)
+      ? data
+      : (data.items ?? data.results ?? data.employees ?? [])
+    : [];
+  const employees = rawEmployees.map(normalizeEmployee);
+  const total = employeeQuery.data
+    ? getPaginationTotal(
+        employeeQuery.data.metadata,
+        Array.isArray(data)
+          ? rawEmployees.length
+          : (data?.total ?? data?.total_count ?? rawEmployees.length),
+      )
+    : 0;
+  const departmentOptions = departmentQuery.data ?? [];
+  const loading = employeeQuery.isPending;
+  const error = employeeQuery.error
+    ? employeeQuery.error instanceof ApiError
+      ? employeeQuery.error.message
+      : "Unable to load employees."
+    : "";
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
   const visibleEmployees = employees;
+  const activeFilterCount = [
+    statusFilter !== "all",
+    departmentFilter !== "all",
+    sortBy !== "first_name",
+    !sortAsc,
+    Boolean(hireDateFrom),
+    Boolean(hireDateTo),
+  ].filter(Boolean).length;
+
+  function clearFilters() {
+    setStatusFilter("all");
+    setDepartmentFilter("all");
+    setSortBy("first_name");
+    setSortAsc(true);
+    setHireDateFrom("");
+    setHireDateTo("");
+    setFilterError("");
+    setPage(1);
+  }
+
+  function applyFilters() {
+    if (hireDateFrom && hireDateTo && hireDateFrom > hireDateTo) {
+      setFilterError("Hire date from cannot be later than hire date to.");
+      return;
+    }
+    setFilterError("");
+    setFiltersOpen(false);
+  }
+
   function openCreate() {
     if (currentUserRole !== "ADMIN") return;
     setEditing(null);
@@ -369,7 +396,7 @@ export default function EmployeePage() {
       }
       setFormOpen(false);
       showSuccess(editing ? "Employee updated" : "Employee created");
-      await loadEmployees();
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
@@ -389,7 +416,7 @@ export default function EmployeePage() {
       await api.patch(`/employees/${employee.id}/status`, {
         status: !employee.status,
       });
-      await loadEmployees();
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
       showSuccess("Employee status updated");
     } catch (requestError) {
       setActionError(
@@ -412,7 +439,7 @@ export default function EmployeePage() {
       setSelected(null);
       setDeleteTarget(null);
       showSuccess("Employee deleted");
-      await loadEmployees();
+      await queryClient.invalidateQueries({ queryKey: ["employees"] });
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
@@ -496,7 +523,21 @@ export default function EmployeePage() {
               onClick={() => setFiltersOpen(true)}
             >
               <SlidersHorizontal /> Filters
+              {activeFilterCount > 0 && (
+                <span className="flex size-5 items-center justify-center rounded-full bg-primary-foreground text-xs text-primary">
+                  {activeFilterCount}
+                </span>
+              )}
             </Button>
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                className="w-full sm:w-auto"
+                onClick={clearFilters}
+              >
+                Clear all
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -676,6 +717,11 @@ export default function EmployeePage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
+            {filterError && (
+              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {filterError}
+              </p>
+            )}
             <div className="space-y-2">
               <Label htmlFor="employee-status-filter">Status</Label>
               <select
@@ -775,23 +821,17 @@ export default function EmployeePage() {
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background px-6 py-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                setStatusFilter("all");
-                setDepartmentFilter("all");
-                setSortBy("first_name");
-                setSortAsc(true);
-                setHireDateFrom("");
-                setHireDateTo("");
-                setPage(1);
-              }}
+              onClick={clearFilters}
             >
               Reset filters
             </Button>
-            <DialogClose render={<Button type="button" />}>Apply filters</DialogClose>
+            <Button type="button" onClick={applyFilters}>
+              Apply filters
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

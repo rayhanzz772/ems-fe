@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -138,8 +139,7 @@ function getListData(response: ApiResponse<User[] | UserListPayload>) {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [total, setTotal] = useState(0);
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -149,61 +149,39 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [form, setForm] = useState<UserForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [actionError, setActionError] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
-  const [rolesLoading, setRolesLoading] = useState(true);
+  const [, setActionError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 10;
   const sortOrder = sortAsc ? "ASC" : "DESC";
 
-  useEffect(() => {
-    let cancelled = false;
+  const rolesQuery = useQuery({
+    queryKey: ["available-roles"],
+    queryFn: async () => {
+      const response = await api.get<ApiResponse<RoleListData>>(
+        "/users/get-all-roles",
+      );
+      const roles = Array.isArray(response.data)
+        ? response.data
+        : (response.data.items ?? response.data.roles ?? []);
+      return roles.map((role) => role.name.trim()).filter(Boolean);
+    },
+  });
 
-    async function loadRoles() {
-      try {
-        const response = await api.get<ApiResponse<RoleListData>>(
-          "/users/get-all-roles",
-        );
-        const roles = Array.isArray(response.data)
-          ? response.data
-          : (response.data.items ?? response.data.roles ?? []);
-        const names = roles.map((role) => role.name.trim()).filter(Boolean);
-        if (!cancelled) {
-          setAvailableRoles(names);
-          setForm((currentForm) => ({
-            ...currentForm,
-            role: currentForm.role || names[0] || "",
-          }));
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          showError(
-            "Unable to load roles",
-            requestError instanceof Error ? requestError.message : undefined,
-          );
-        }
-      } finally {
-        if (!cancelled) setRolesLoading(false);
-      }
-    }
-
-    void loadRoles();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
+  const usersQuery = useQuery({
+    queryKey: [
+      "users",
+      page,
+      query,
+      roleFilter,
+      statusFilter,
+      sortOrder,
+    ],
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         per_page: String(pageSize),
@@ -218,26 +196,20 @@ export default function UsersPage() {
       const response = await api.get<ApiResponse<User[] | UserListPayload>>(
         `/users?${params.toString()}`,
       );
-      const result = getListData(response);
-      setUsers(result.users);
-      setTotal(result.total);
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : "Unable to load users.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [page, query, roleFilter, sortOrder, statusFilter]);
+      return getListData(response);
+    },
+  });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadUsers();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [loadUsers]);
+  const users = usersQuery.data?.users ?? [];
+  const total = usersQuery.data?.total ?? 0;
+  const loading = usersQuery.isLoading;
+  const error = usersQuery.error
+    ? usersQuery.error instanceof ApiError
+      ? usersQuery.error.message
+      : "Unable to load users."
+    : "";
+  const availableRoles = rolesQuery.data ?? [];
+  const rolesLoading = rolesQuery.isLoading;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -309,7 +281,7 @@ export default function UsersPage() {
       }
       setFormOpen(false);
       showSuccess(editing ? "User updated" : "User created");
-      await loadUsers();
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
@@ -335,7 +307,7 @@ export default function UsersPage() {
 
     try {
       await api.patch(`/users/${user.id}/status`, { status: nextStatus });
-      await loadUsers();
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
       showSuccess("User status updated");
       if (selected?.id === user.id)
         setSelected({ ...user, status: nextStatus });
@@ -359,7 +331,7 @@ export default function UsersPage() {
       await api.delete(`/users/${user.id}/delete`);
       setSelected(null);
       setDeleteTarget(null);
-      await loadUsers();
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
       showSuccess("User deleted");
     } catch (requestError) {
       setActionError(

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -165,7 +166,7 @@ function ActionBadge({ action }: { action: Action }) {
 }
 
 export default function AuditLogPage() {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [action, setAction] = useState("all");
   const [entity, setEntity] = useState("all");
@@ -173,9 +174,6 @@ export default function AuditLogPage() {
   const [dateTo, setDateTo] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [userId, setUserId] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [selected, setSelected] = useState<AuditLog | null>(null);
@@ -184,10 +182,20 @@ export default function AuditLogPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 5;
 
-  const loadLogs = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
+  const logsQuery = useQuery({
+    queryKey: [
+      "audit-logs",
+      page,
+      query,
+      action,
+      entity,
+      userId,
+      dateFrom,
+      dateTo,
+      sortBy,
+      sortAsc,
+    ],
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         per_page: String(pageSize),
@@ -207,30 +215,24 @@ export default function AuditLogPage() {
       const items = Array.isArray(data)
         ? data
         : (data.items ?? data.results ?? data.audit_logs ?? []);
-      setLogs(items.map(normalizeLog));
-      setTotal(
-        getPaginationTotal(
+      return {
+        logs: items.map(normalizeLog),
+        total: getPaginationTotal(
           response.metadata,
           getTotal(data, response.metadata, items.length),
         ),
-      );
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : "Unable to load audit logs.",
-      );
-      setLogs([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [action, dateFrom, dateTo, entity, page, query, sortAsc, sortBy, userId]);
+      };
+    },
+  });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => void loadLogs(), 250);
-    return () => window.clearTimeout(timer);
-  }, [loadLogs]);
+  const logs = logsQuery.data?.logs ?? [];
+  const total = logsQuery.data?.total ?? 0;
+  const loading = logsQuery.isLoading;
+  const error = logsQuery.error
+    ? logsQuery.error instanceof ApiError
+      ? logsQuery.error.message
+      : "Unable to load audit logs."
+    : "";
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -252,11 +254,6 @@ export default function AuditLogPage() {
       URL.revokeObjectURL(url);
       showSuccess("Audit log export downloaded");
     } catch (requestError) {
-      setError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : "Unable to export audit logs.",
-      );
       showError(
         "Unable to export audit logs",
         requestError instanceof Error ? requestError.message : undefined,
@@ -272,7 +269,7 @@ export default function AuditLogPage() {
       await api.delete(`/audit-logs/${deleteTarget.id}/delete`);
       showSuccess("Audit log deleted successfully.");
       setDeleteTarget(null);
-      await loadLogs();
+      await queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
     } catch (requestError) {
       showError(
         requestError instanceof ApiError

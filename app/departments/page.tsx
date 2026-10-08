@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -118,13 +119,10 @@ function getAvatarColor(name: string) {
 }
 
 export default function DepartmentPage() {
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [selected, setSelected] = useState<Department | null>(null);
   const [editing, setEditing] = useState<Department | null>(null);
   const [form, setForm] = useState(emptyDepartment);
@@ -141,10 +139,9 @@ export default function DepartmentPage() {
       .catch(() => setCurrentUserRole(null));
   }, []);
 
-  const loadDepartments = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
+  const departmentsQuery = useQuery({
+    queryKey: ["departments", page, query, sortAsc],
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         per_page: String(pageSize),
@@ -159,32 +156,26 @@ export default function DepartmentPage() {
       const items = Array.isArray(data)
         ? data
         : (data.items ?? data.results ?? data.departments ?? []);
-      setDepartments(items.map(normalizeDepartment));
-      setTotal(
-        getPaginationTotal(
+      return {
+        departments: items.map(normalizeDepartment),
+        total: getPaginationTotal(
           response.metadata,
           Array.isArray(data)
             ? items.length
             : (data.total ?? data.total_count ?? items.length),
         ),
-      );
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : "Unable to load departments.",
-      );
-      setDepartments([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, query, sortAsc]);
+      };
+    },
+  });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => void loadDepartments(), 250);
-    return () => window.clearTimeout(timer);
-  }, [loadDepartments]);
+  const departments = departmentsQuery.data?.departments ?? [];
+  const total = departmentsQuery.data?.total ?? 0;
+  const loading = departmentsQuery.isLoading;
+  const error = departmentsQuery.error
+    ? departmentsQuery.error instanceof ApiError
+      ? departmentsQuery.error.message
+      : "Unable to load departments."
+    : "";
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -240,7 +231,7 @@ export default function DepartmentPage() {
       }
       setFormOpen(false);
       showSuccess(editing ? "Department updated" : "Department created");
-      await loadDepartments();
+      await queryClient.invalidateQueries({ queryKey: ["departments"] });
     } catch (requestError) {
       setDeleteError(
         requestError instanceof ApiError
@@ -262,7 +253,7 @@ export default function DepartmentPage() {
       setSelected(null);
       setDeleteTarget(null);
       showSuccess("Department deleted");
-      await loadDepartments();
+      await queryClient.invalidateQueries({ queryKey: ["departments"] });
     } catch (requestError) {
       setDeleteError(
         requestError instanceof ApiError
@@ -286,7 +277,7 @@ export default function DepartmentPage() {
         status: !department.status,
       });
       showSuccess("Department status updated");
-      await loadDepartments();
+      await queryClient.invalidateQueries({ queryKey: ["departments"] });
       if (selected?.id === department.id) {
         setSelected({ ...selected, status: !department.status });
       }

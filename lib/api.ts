@@ -13,10 +13,7 @@ export class ApiError extends Error {
 }
 
 function getAccessToken() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+  if (typeof window === "undefined") return null;
   return window.localStorage.getItem("access_token");
 }
 
@@ -32,7 +29,6 @@ export async function apiRequest<T>(
 
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
-
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -47,7 +43,6 @@ export async function apiRequest<T>(
     headers,
     credentials: "include",
   });
-
   const contentType = response.headers.get("content-type") ?? "";
   const body = contentType.includes("application/json")
     ? await response.json()
@@ -61,7 +56,6 @@ export async function apiRequest<T>(
       typeof body.message === "string"
         ? body.message
         : `API request failed with status ${response.status}.`;
-
     throw new ApiError(message, response.status, body);
   }
 
@@ -71,22 +65,57 @@ export async function apiRequest<T>(
 export const api = {
   get: <T>(path: string) => apiRequest<T>(path),
   post: <T>(path: string, body: unknown) =>
-    apiRequest<T>(path, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+    apiRequest<T>(path, { method: "POST", body: JSON.stringify(body) }),
   put: <T>(path: string, body: unknown) =>
-    apiRequest<T>(path, {
-      method: "PUT",
-      body: JSON.stringify(body),
-    }),
+    apiRequest<T>(path, { method: "PUT", body: JSON.stringify(body) }),
   patch: <T>(path: string, body: unknown) =>
-    apiRequest<T>(path, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    }),
-  delete: <T>(path: string) =>
-    apiRequest<T>(path, {
-      method: "DELETE",
-    }),
+    apiRequest<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+  delete: <T>(path: string) => apiRequest<T>(path, { method: "DELETE" }),
 };
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  role: "ADMIN" | "HR" | "EMPLOYEE";
+  status?: boolean;
+};
+
+type ApiResponse<T> = {
+  success: boolean;
+  message: string;
+  metadata: Record<string, unknown>;
+  data: T;
+};
+
+export async function login(email: string, password: string) {
+  const response = await api.post<ApiResponse<AuthUser>>("/auth/login", {
+    email,
+    password,
+  });
+  const responseData = response.data as AuthUser & {
+    token?: string;
+    access_token?: string;
+  };
+  const token = responseData.token ?? responseData.access_token;
+
+  if (token && typeof window !== "undefined") {
+    window.localStorage.setItem("access_token", token);
+  }
+
+  return response.data;
+}
+
+export async function getMe() {
+  const response = await api.get<ApiResponse<AuthUser>>("/auth/get-me");
+  return response.data;
+}
+
+export async function logout() {
+  try {
+    await api.post<ApiResponse<null>>("/auth/logout", {});
+  } finally {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("access_token");
+    }
+  }
+}

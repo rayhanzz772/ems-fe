@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { logout } from "@/lib/api";
 
 export function Header() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -34,9 +35,13 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setMenuOpen(false);
-    router.push("/login");
+    try {
+      await logout();
+    } finally {
+      router.push("/login");
+    }
   };
 
   return (
@@ -63,42 +68,44 @@ export function Header() {
             <Moon aria-hidden="true" className="size-4 dark:hidden" />
           </Button>
 
-          <div ref={menuRef} className="relative">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setMenuOpen((open) => !open)}
-              className="flex items-center gap-2 rounded-full px-2 py-1.5 shadow-none"
-              aria-label="Open user menu"
-              title="Open user menu"
-            >
-              <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                JD
-              </div>
-              <span className="hidden text-sm font-medium text-foreground sm:inline">
-                John Doe
-              </span>
-              <ChevronDown
-                aria-hidden="true"
-                className={`size-4 text-muted-foreground transition-transform ${
-                  menuOpen ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
+          {showSidebar && (
+            <div ref={menuRef} className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMenuOpen((open) => !open)}
+                className="flex items-center gap-2 rounded-full px-2 py-1.5 shadow-none"
+                aria-label="Open user menu"
+                title="Open user menu"
+              >
+                <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                  JD
+                </div>
+                <span className="hidden text-sm font-medium text-foreground sm:inline">
+                  John Doe
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={`size-4 text-muted-foreground transition-transform ${
+                    menuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </Button>
 
-            {menuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-border bg-popover p-1 shadow-lg">
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition hover:bg-muted"
-                >
-                  <LogOut className="size-4" aria-hidden="true" />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
+              {menuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-border bg-popover p-1 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition hover:bg-muted"
+                  >
+                    <LogOut className="size-4" aria-hidden="true" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </header>

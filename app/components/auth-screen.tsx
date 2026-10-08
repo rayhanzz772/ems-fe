@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Card, Input, Label } from "@/components/ui";
+import { ApiError, login } from "@/lib/api";
 
 type AuthScreenProps = {
   mode: "login" | "register";
@@ -15,12 +16,30 @@ export function AuthScreen({ mode }: AuthScreenProps) {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!isRegister) {
-      router.push("/dashboard");
+      setMessage("");
+      setIsSubmitting(true);
+      const formData = new FormData(event.currentTarget);
+      try {
+        await login(
+          String(formData.get("email") ?? ""),
+          String(formData.get("password") ?? ""),
+        );
+        router.push("/dashboard");
+      } catch (error) {
+        setMessage(
+          error instanceof ApiError
+            ? error.message
+            : "Unable to sign in. Please try again.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -113,8 +132,9 @@ export function AuthScreen({ mode }: AuthScreenProps) {
             <Button
               type="submit"
               className="w-full"
+              disabled={isSubmitting}
             >
-              {isRegister ? "Create account" : "Sign in"}
+              {isSubmitting ? "Signing in..." : isRegister ? "Create account" : "Sign in"}
             </Button>
             <p role="status" aria-live="polite" className="text-center text-xs text-muted-foreground">
               {message}

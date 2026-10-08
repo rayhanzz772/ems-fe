@@ -10,7 +10,13 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { ApiError, api, type ApiResponse } from "@/lib/api";
+import {
+  ApiError,
+  api,
+  getMe,
+  getPaginationTotal,
+  type ApiResponse,
+} from "@/lib/api";
 import {
   Button,
   Card,
@@ -100,7 +106,14 @@ export default function DepartmentPage() {
   const [form, setForm] = useState(emptyDepartment);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const pageSize = 5;
+
+  useEffect(() => {
+    void getMe()
+      .then((user) => setCurrentUserRole(user.role))
+      .catch(() => setCurrentUserRole(null));
+  }, []);
 
   const loadDepartments = useCallback(async () => {
     setLoading(true);
@@ -122,9 +135,12 @@ export default function DepartmentPage() {
         : data.items ?? data.results ?? data.departments ?? [];
       setDepartments(items.map(normalizeDepartment));
       setTotal(
-        Array.isArray(data)
-          ? items.length
-          : data.total ?? data.total_count ?? items.length,
+        getPaginationTotal(
+          response.metadata,
+          Array.isArray(data)
+            ? items.length
+            : data.total ?? data.total_count ?? items.length,
+        ),
       );
     } catch (requestError) {
       setError(
@@ -149,6 +165,7 @@ export default function DepartmentPage() {
   const visibleDepartments = departments;
 
   function openCreate() {
+    if (currentUserRole !== "ADMIN") return;
     setEditing(null);
     setForm({ ...emptyDepartment });
     setDeleteError("");
@@ -181,6 +198,10 @@ export default function DepartmentPage() {
   async function saveDepartment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteError("");
+    if (!editing && currentUserRole !== "ADMIN") {
+      setDeleteError("Only administrators can create departments.");
+      return;
+    }
     const values = {
       name: form.name.trim(),
       description: form.description.trim(),
@@ -229,9 +250,11 @@ export default function DepartmentPage() {
             Organize your company units and team structure.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus /> Add department
-        </Button>
+        {currentUserRole === "ADMIN" && (
+          <Button onClick={openCreate}>
+            <Plus /> Add department
+          </Button>
+        )}
       </section>
 
       <Card>

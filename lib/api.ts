@@ -86,6 +86,15 @@ export type ApiResponse<T> = {
   data: T;
 };
 
+export function getPaginationTotal(
+  metadata: Record<string, unknown> | undefined,
+  fallback: number,
+) {
+  const totalRow = metadata?.total_row;
+  if (typeof totalRow === "number") return totalRow;
+  return fallback;
+}
+
 export async function login(email: string, password: string) {
   const response = await api.post<ApiResponse<AuthUser>>("/auth/login", {
     email,

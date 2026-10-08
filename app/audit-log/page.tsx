@@ -9,7 +9,12 @@ import {
   Eye,
   Search,
 } from "lucide-react";
-import { ApiError, api, type ApiResponse } from "@/lib/api";
+import {
+  ApiError,
+  api,
+  getPaginationTotal,
+  type ApiResponse,
+} from "@/lib/api";
 import {
   Button,
   Card,
@@ -67,7 +72,49 @@ type AuditLogListData = AuditLogApi[] | {
   audit_logs?: AuditLogApi[];
   total?: number;
   total_count?: number;
+  pagination?: {
+    total?: number;
+    total_count?: number;
+  };
 };
+
+function getTotal(
+  data: AuditLogListData,
+  metadata: Record<string, unknown> | undefined,
+  itemCount: number,
+) : number {
+  const metadataTotal =
+    typeof metadata?.total === "number" ? metadata.total : undefined;
+  const metadataTotalCount =
+    typeof metadata?.total_count === "number"
+      ? metadata.total_count
+      : undefined;
+  if (Array.isArray(data)) {
+    const metadataPagination =
+      metadata?.pagination &&
+      typeof metadata.pagination === "object" &&
+      metadata.pagination !== null
+        ? (metadata.pagination as { total?: number; total_count?: number })
+        : undefined;
+    return (
+      metadataTotal ??
+      metadataTotalCount ??
+      metadataPagination?.total ??
+      metadataPagination?.total_count ??
+      itemCount
+    );
+  }
+
+  return (
+    data.total ??
+    data.total_count ??
+    data.pagination?.total ??
+    data.pagination?.total_count ??
+    metadataTotal ??
+    metadataTotalCount ??
+    itemCount
+  );
+}
 
 function normalizeLog(log: AuditLogApi): AuditLog {
   return {
@@ -144,9 +191,10 @@ export default function AuditLogPage() {
         : data.items ?? data.results ?? data.audit_logs ?? [];
       setLogs(items.map(normalizeLog));
       setTotal(
-        Array.isArray(data)
-          ? items.length
-          : data.total ?? data.total_count ?? items.length,
+        getPaginationTotal(
+          response.metadata,
+          getTotal(data, response.metadata, items.length),
+        ),
       );
     } catch (requestError) {
       setError(

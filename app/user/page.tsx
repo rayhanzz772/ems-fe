@@ -44,9 +44,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ApiError, api, getMe, type ApiResponse } from "@/lib/api";
+import {
+  ApiError,
+  api,
+  getMe,
+  getPaginationTotal,
+  type ApiResponse,
+} from "@/lib/api";
 
-type UserRole = "ADMIN" | "HR" | "EMPLOYEE";
+type UserRole = "ADMIN" | "HR";
 type User = {
   id: string;
   email: string;
@@ -74,7 +80,7 @@ type UserListPayload = {
 const emptyForm: UserForm = {
   email: "",
   password: "",
-  role: "EMPLOYEE",
+  role: "HR",
   status: true,
 };
 
@@ -94,11 +100,17 @@ function StatusBadge({ active }: { active: boolean }) {
 function getListData(response: ApiResponse<User[] | UserListPayload>) {
   const payload = response.data;
   if (Array.isArray(payload)) {
-    return { users: payload, total: payload.length };
+    return {
+      users: payload,
+      total: getPaginationTotal(response.metadata, payload.length),
+    };
   }
   return {
     users: payload.items ?? payload.results ?? payload.users ?? [],
-    total: payload.total ?? payload.total_count ?? 0,
+    total: getPaginationTotal(
+      response.metadata,
+      payload.total ?? payload.total_count ?? 0,
+    ),
   };
 }
 
@@ -119,6 +131,7 @@ export default function UsersPage() {
   const [actionError, setActionError] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const pageSize = 10;
   const sortOrder = sortAsc ? "ASC" : "DESC";
 
@@ -167,10 +180,12 @@ export default function UsersPage() {
         .then((user) => {
           setCurrentUserId(user.id);
           setCurrentUserEmail(user.email.toLowerCase());
+          setCurrentUserRole(user.role);
         })
         .catch(() => {
           setCurrentUserId(null);
           setCurrentUserEmail(null);
+          setCurrentUserRole(null);
         });
     }, 0);
 
@@ -186,6 +201,7 @@ export default function UsersPage() {
   }
 
   function openCreate() {
+    if (currentUserRole !== "ADMIN") return;
     setEditing(null);
     setForm(emptyForm);
     setActionError("");
@@ -207,6 +223,10 @@ export default function UsersPage() {
   async function saveUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionError("");
+    if (!editing && currentUserRole !== "ADMIN") {
+      setActionError("Only administrators can create users.");
+      return;
+    }
     try {
       const payload: Record<string, string | boolean> = {
         email: form.email,
@@ -281,9 +301,11 @@ export default function UsersPage() {
             Manage login accounts, roles, and access status.
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus /> Add user
-        </Button>
+        {currentUserRole === "ADMIN" && (
+          <Button onClick={openCreate}>
+            <Plus /> Add user
+          </Button>
+        )}
       </section>
 
       <Card>
@@ -318,7 +340,6 @@ export default function UsersPage() {
                 <option value="all">All roles</option>
                 <option value="ADMIN">Admin</option>
                 <option value="HR">HR</option>
-                <option value="EMPLOYEE">Employee</option>
               </select>
               <select
                 aria-label="Filter by status"
@@ -380,69 +401,69 @@ export default function UsersPage() {
                       user.email.toLowerCase() === currentUserEmail;
 
                     return (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <button
-                          type="button"
-                          className="flex items-center gap-3 text-left"
-                          onClick={() => setSelected(user)}
-                        >
-                          <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                            {user.email[0]?.toUpperCase()}
-                          </span>
-                          <span className="font-medium hover:underline">
-                            {user.email}
-                          </span>
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium">
-                          {user.role}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={user.status}
-                          disabled={isCurrentUser}
-                          onCheckedChange={(checked) =>
-                            void toggleStatus(user, checked)
-                          }
-                          aria-label={
-                            isCurrentUser
-                              ? "Your status cannot be changed"
-                              : `Turn status ${user.status ? "off" : "on"}`
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="View details"
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <button
+                            type="button"
+                            className="flex items-center gap-3 text-left"
                             onClick={() => setSelected(user)}
                           >
-                            <Eye />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Edit user"
-                            onClick={() => openEdit(user)}
-                          >
-                            <Pencil />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Delete user"
-                            onClick={() => void deleteUser(user)}
-                          >
-                            <Trash2 />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                            <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                              {user.email[0]?.toUpperCase()}
+                            </span>
+                            <span className="font-medium hover:underline">
+                              {user.email}
+                            </span>
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium">
+                            {user.role}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={user.status}
+                            disabled={isCurrentUser}
+                            onCheckedChange={(checked) =>
+                              void toggleStatus(user, checked)
+                            }
+                            aria-label={
+                              isCurrentUser
+                                ? "Your status cannot be changed"
+                                : `Turn status ${user.status ? "off" : "on"}`
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="View details"
+                              onClick={() => setSelected(user)}
+                            >
+                              <Eye />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Edit user"
+                              onClick={() => openEdit(user)}
+                            >
+                              <Pencil />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Delete user"
+                              onClick={() => void deleteUser(user)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
                 {!loading && !users.length && (
@@ -627,7 +648,6 @@ export default function UsersPage() {
               >
                 <option value="ADMIN">Admin</option>
                 <option value="HR">HR</option>
-                <option value="EMPLOYEE">Employee</option>
               </select>
             </div>
             <label className="flex items-center gap-2 text-sm">

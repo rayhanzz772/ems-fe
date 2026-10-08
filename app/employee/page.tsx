@@ -9,10 +9,15 @@ import {
   Pencil,
   Plus,
   Search,
-  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-import { ApiError, api, type ApiResponse } from "@/lib/api";
+import {
+  ApiError,
+  api,
+  getMe,
+  getPaginationTotal,
+  type ApiResponse,
+} from "@/lib/api";
 import {
   Button,
   Card,
@@ -64,6 +69,10 @@ type Employee = {
 };
 
 type EmployeeForm = Omit<Employee, "id" | "employee_code" | "department">;
+type DepartmentOption = {
+  id: string;
+  name: string;
+};
 
 const positions = [
   "Product Designer",
@@ -104,7 +113,7 @@ const emptyForm: EmployeeForm = {
   last_name: "",
   email: "",
   phone_number: "",
-  department_id: "engineering",
+  department_id: "",
   position: positions[0],
   hire_date: "",
   address: "",
@@ -172,13 +181,51 @@ export default function EmployeePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [departmentOptions, setDepartmentOptions] = useState<
+    DepartmentOption[]
+  >([]);
   const [hireDateFrom, setHireDateFrom] = useState("");
   const [hireDateTo, setHireDateTo] = useState("");
   const [selected, setSelected] = useState<Employee | null>(null);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const pageSize = 5;
+
+  useEffect(() => {
+    void getMe()
+      .then((user) => setCurrentUserRole(user.role))
+      .catch(() => setCurrentUserRole(null));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDepartmentOptions() {
+      try {
+        const response = await api.get<
+          ApiResponse<DepartmentOption[]>
+        >("/employees/get-all-departments");
+        if (!cancelled) {
+          setDepartmentOptions(response.data);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setActionError(
+            requestError instanceof ApiError
+              ? requestError.message
+              : "Unable to load departments.",
+          );
+        }
+      }
+    }
+
+    void loadDepartmentOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadEmployees = useCallback(async () => {
     setLoading(true);
@@ -206,9 +253,12 @@ export default function EmployeePage() {
         : (data.items ?? data.results ?? data.employees ?? []);
       setEmployees(items.map(normalizeEmployee));
       setTotal(
-        Array.isArray(data)
-          ? items.length
-          : (data.total ?? data.total_count ?? items.length),
+        getPaginationTotal(
+          response.metadata,
+          Array.isArray(data)
+            ? items.length
+            : (data.total ?? data.total_count ?? items.length),
+        ),
       );
     } catch (requestError) {
       setError(
@@ -240,15 +290,8 @@ export default function EmployeePage() {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
   const visibleEmployees = employees;
-  const departmentOptions = Array.from(
-    new Map(
-      employees.map((employee) => [
-        employee.department_id,
-        employee.department || employee.department_id,
-      ]),
-    ),
-  );
   function openCreate() {
+    if (currentUserRole !== "ADMIN") return;
     setEditing(null);
     setForm({ ...emptyForm });
     setActionError("");
@@ -291,6 +334,10 @@ export default function EmployeePage() {
   async function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionError("");
+    if (!editing && currentUserRole !== "ADMIN") {
+      setActionError("Only administrators can create employees.");
+      return;
+    }
     try {
       if (editing) {
         await api.put(`/employees/${editing.id}/update`, form);
@@ -374,9 +421,11 @@ export default function EmployeePage() {
           <Button variant="outline" onClick={exportCsv}>
             <Download /> Export CSV
           </Button>
-          <Button onClick={openCreate}>
-            <Plus /> Add employee
-          </Button>
+          {currentUserRole === "ADMIN" && (
+            <Button onClick={openCreate}>
+              <Plus /> Add employee
+            </Button>
+          )}
         </div>
       </section>
 
@@ -425,9 +474,9 @@ export default function EmployeePage() {
                 className="h-9 rounded-md border bg-background px-3 text-sm"
               >
                 <option value="all">All departments</option>
-                {departmentOptions.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
+                {departmentOptions.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
                   </option>
                 ))}
               </select>
@@ -784,9 +833,9 @@ export default function EmployeePage() {
                 }
                 className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
-                {departmentOptions.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
+                {departmentOptions.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
                   </option>
                 ))}
               </select>

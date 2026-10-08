@@ -31,7 +31,9 @@ export function AppSidebar() {
     pathname === "/user" ||
     pathname === "/department" ||
     pathname === "/employee" ||
-    pathname === "/audit-log" || pathname === "/audit-logs";
+    pathname === "/audit-log" ||
+    pathname === "/audit-logs" ||
+    pathname === "/api-docs";
 
   if (!isWorkspaceRoute) return null;
 
@@ -105,8 +107,8 @@ export function AppSidebar() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link href="/audit-logs" />}
-                isActive={false}
+                render={<Link href="/api-docs" />}
+                isActive={pathname === "/api-docs"}
               >
                 <FileCodeCorner aria-hidden="true" />
                 <span>API Docs</span>

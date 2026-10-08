@@ -95,7 +95,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6 ">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {isRegister && (
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
@@ -185,12 +185,12 @@ export function AuthScreen({ mode }: AuthScreenProps) {
             </form>
 
             <p className="text-center text-sm text-muted-foreground">
-              {isRegister ? "Already have an account? " : "New to Morrow? "}
+              {isRegister ? "Already have an account? " : "Forgot Passwrord? "}
               <Link
-                href={isRegister ? "/login" : "/register"}
+                href="/login"
                 className="font-medium text-foreground underline-offset-4 hover:underline"
               >
-                {isRegister ? "Sign in" : "Create an account"}
+                {isRegister ? "Sign in" : "Call Admin"}
               </Link>
             </p>
           </Card>

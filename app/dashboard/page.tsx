@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, ArrowUpRight, Building2, Plus } from "lucide-react";
+import {
+  Activity,
+  ArrowUpRight,
+  Building2,
+  Pencil,
+  Plus,
+  SquarePen,
+  Trash,
+} from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -33,17 +41,17 @@ const departmentConfig = {
 } satisfies ChartConfig;
 
 const statusConfig = {
-  active: { label: "Active", color: "#22c55e" },
-  inactive: { label: "Inactive", color: "#f97316" },
+  active: { label: "Active", color: "rgba(36, 188, 92, 0.8)" },
+  inactive: { label: "Inactive", color: "rgba(249, 115, 22, 0.8)" },
 } satisfies ChartConfig;
 
 const departmentColors = [
-  "#2563eb",
-  "#7c3aed",
-  "#db2777",
-  "#0891b2",
-  "#16a34a",
-  "#ca8a04",
+  "rgba(37, 99, 235, 0.8)",
+  "rgba(124, 58, 237, 0.8)",
+  "rgba(219, 39, 119, 0.8)",
+  "rgba(8, 145, 178, 0.8)",
+  "rgba(22, 163, 74, 0.8)",
+  "rgba(202, 138, 4, 0.8)",
 ];
 
 function formatActivityDate(date: string) {
@@ -55,6 +63,31 @@ function formatActivityDate(date: string) {
 
 function activityLabel(action: string, entity: string) {
   return `${action.charAt(0)}${action.slice(1).toLowerCase()} ${entity.toLowerCase()}`;
+}
+
+const activityVisuals = {
+  CREATE: {
+    icon: Pencil,
+    className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+  },
+  UPDATE: {
+    icon: SquarePen,
+    className: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+  },
+  DELETE: {
+    icon: Trash,
+    className: "bg-red-500/15 text-red-600 dark:text-red-300",
+  },
+} satisfies Record<
+  "CREATE" | "UPDATE" | "DELETE",
+  { icon: typeof Pencil; className: string }
+>;
+
+function getActivityVisual(action: string) {
+  return (
+    activityVisuals[action as keyof typeof activityVisuals] ??
+    activityVisuals.UPDATE
+  );
 }
 
 export default function DashboardPage() {
@@ -329,9 +362,18 @@ export default function DashboardPage() {
           <CardContent className="space-y-4">
             {dashboard.recent_activity.map((activity) => (
               <div key={activity.id} className="flex gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Activity className="size-4" />
-                </span>
+                {(() => {
+                  const visual = getActivityVisual(activity.action);
+                  const ActivityIcon = visual.icon;
+
+                  return (
+                    <span
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-full ${visual.className}`}
+                    >
+                      <ActivityIcon className="size-4" />
+                    </span>
+                  );
+                })()}
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
                     {activityLabel(activity.action, activity.entity)}

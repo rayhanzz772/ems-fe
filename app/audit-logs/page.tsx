@@ -83,6 +83,34 @@ type AuditLogListData =
       };
     };
 
+const actionVisuals = {
+  CREATE: {
+    icon: Pencil,
+    className: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+    badgeClassName:
+      "border border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  },
+  UPDATE: {
+    icon: SquarePen,
+    className: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+    badgeClassName:
+      "border border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  },
+  DELETE: {
+    icon: Trash,
+    className: "bg-red-500/15 text-red-600 dark:text-red-300",
+    badgeClassName:
+      "border border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-300",
+  },
+} satisfies Record<
+  Action,
+  {
+    icon: typeof Pencil;
+    className: string;
+    badgeClassName: string;
+  }
+>;
+
 function getTotal(
   data: AuditLogListData,
   metadata: Record<string, unknown> | undefined,
@@ -140,24 +168,11 @@ function formatDate(value: string) {
 }
 
 function ActionBadge({ action }: { action: Action }) {
-  const styles = {
-    CREATE:
-      "border border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-    UPDATE:
-      "border border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300",
-    DELETE:
-      "border border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-300",
-  };
-  const icons = {
-    CREATE: Pencil,
-    UPDATE: SquarePen,
-    DELETE: Trash,
-  };
-  const Icon = icons[action];
+  const { icon: Icon, badgeClassName } = actionVisuals[action];
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${styles[action]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${badgeClassName}`}
     >
       <Icon className="size-3.5" />
       {action}
@@ -290,7 +305,11 @@ export default function AuditLogPage() {
             Track important changes made across your organization.
           </p>
         </div>
-        <Button className="w-full sm:w-auto" variant="outline" onClick={exportCsv}>
+        <Button
+          className="w-full sm:w-auto"
+          variant="outline"
+          onClick={exportCsv}
+        >
           <Download /> Export CSV
         </Button>
       </section>
@@ -364,67 +383,59 @@ export default function AuditLogPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                {visibleLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`flex size-9 items-center justify-center rounded-full ${
-                            log.action === "CREATE"
-                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-                              : log.action === "UPDATE"
-                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-300"
-                                : "bg-red-500/15 text-red-600 dark:text-red-300"
-                          }`}
-                        >
-                          {log.action === "CREATE" ? (
-                            <Pencil className="size-4" />
-                          ) : log.action === "UPDATE" ? (
-                            <SquarePen className="size-4" />
-                          ) : (
-                            <Trash className="size-4" />
-                          )}
-                        </span>
-                        <span>
-                          <span className="block font-medium">
-                            {log.user_email}
+                {visibleLogs.map((log) => {
+                  const ActivityIcon = actionVisuals[log.action].icon;
+
+                  return (
+                    <TableRow key={log.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`flex size-9 items-center justify-center rounded-full ${actionVisuals[log.action].className}`}
+                          >
+                            <ActivityIcon className="size-4" />
                           </span>
-                          <span className="block text-xs text-muted-foreground">
-                            ID #{log.user_id} changed record #{log.entity_id}
+                          <span>
+                            <span className="block font-medium">
+                              {log.user_email}
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              ID #{log.user_id} changed record #{log.entity_id}
+                            </span>
                           </span>
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <ActionBadge action={log.action} />
-                    </TableCell>
-                    <TableCell>{log.entity}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(log.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="View changes"
-                          onClick={() => setSelected(log)}
-                        >
-                          <Eye />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Delete audit log"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(log)}
-                        >
-                          <Trash />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <ActionBadge action={log.action} />
+                      </TableCell>
+                      <TableCell>{log.entity}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(log.created_at)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="View changes"
+                            onClick={() => setSelected(log)}
+                          >
+                            <Eye />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Delete audit log"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(log)}
+                          >
+                            <Trash />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
                 {!visibleLogs.length && (
                   <TableRow>
                     <TableCell
@@ -507,8 +518,21 @@ export default function AuditLogPage() {
           <div className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="audit-action-filter" className="text-sm font-medium">Action</label>
-                <select id="audit-action-filter" value={action} onChange={(event) => { setAction(event.target.value); resetPage(); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                <label
+                  htmlFor="audit-action-filter"
+                  className="text-sm font-medium"
+                >
+                  Action
+                </label>
+                <select
+                  id="audit-action-filter"
+                  value={action}
+                  onChange={(event) => {
+                    setAction(event.target.value);
+                    resetPage();
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
                   <option value="all">All actions</option>
                   <option value="CREATE">Create</option>
                   <option value="UPDATE">Update</option>
@@ -516,8 +540,21 @@ export default function AuditLogPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label htmlFor="audit-entity-filter" className="text-sm font-medium">Entity</label>
-                <select id="audit-entity-filter" value={entity} onChange={(event) => { setEntity(event.target.value); resetPage(); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                <label
+                  htmlFor="audit-entity-filter"
+                  className="text-sm font-medium"
+                >
+                  Entity
+                </label>
+                <select
+                  id="audit-entity-filter"
+                  value={entity}
+                  onChange={(event) => {
+                    setEntity(event.target.value);
+                    resetPage();
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
                   <option value="all">All entities</option>
                   <option value="Employee">Employee</option>
                   <option value="User">User</option>
@@ -526,13 +563,39 @@ export default function AuditLogPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <label htmlFor="audit-user-filter" className="text-sm font-medium">User ID</label>
-              <Input id="audit-user-filter" value={userId} onChange={(event) => { setUserId(event.target.value); resetPage(); }} placeholder="User ID" />
+              <label
+                htmlFor="audit-user-filter"
+                className="text-sm font-medium"
+              >
+                User ID
+              </label>
+              <Input
+                id="audit-user-filter"
+                value={userId}
+                onChange={(event) => {
+                  setUserId(event.target.value);
+                  resetPage();
+                }}
+                placeholder="User ID"
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="audit-sort-filter" className="text-sm font-medium">Sort by</label>
-                <select id="audit-sort-filter" value={sortBy} onChange={(event) => { setSortBy(event.target.value); resetPage(); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                <label
+                  htmlFor="audit-sort-filter"
+                  className="text-sm font-medium"
+                >
+                  Sort by
+                </label>
+                <select
+                  id="audit-sort-filter"
+                  value={sortBy}
+                  onChange={(event) => {
+                    setSortBy(event.target.value);
+                    resetPage();
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
                   <option value="created_at">Created date</option>
                   <option value="action">Action</option>
                   <option value="entity">Entity</option>
@@ -542,19 +605,71 @@ export default function AuditLogPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Order</label>
-                <Button type="button" variant="outline" className="w-full" onClick={() => setSortAsc((value) => !value)}>
-                  {sortAsc ? <ArrowUp /> : <ArrowDown />} {sortAsc ? "Ascending" : "Descending"}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSortAsc((value) => !value)}
+                >
+                  {sortAsc ? <ArrowUp /> : <ArrowDown />}{" "}
+                  {sortAsc ? "Ascending" : "Descending"}
                 </Button>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2"><label htmlFor="audit-date-from" className="text-sm font-medium">Date from</label><Input id="audit-date-from" type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); resetPage(); }} /></div>
-              <div className="space-y-2"><label htmlFor="audit-date-to" className="text-sm font-medium">Date to</label><Input id="audit-date-to" type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); resetPage(); }} /></div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="audit-date-from"
+                  className="text-sm font-medium"
+                >
+                  Date from
+                </label>
+                <Input
+                  id="audit-date-from"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => {
+                    setDateFrom(event.target.value);
+                    resetPage();
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="audit-date-to" className="text-sm font-medium">
+                  Date to
+                </label>
+                <Input
+                  id="audit-date-to"
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => {
+                    setDateTo(event.target.value);
+                    resetPage();
+                  }}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => { setAction("all"); setEntity("all"); setUserId(""); setSortBy("created_at"); setSortAsc(false); setDateFrom(""); setDateTo(""); resetPage(); }}>Reset filters</Button>
-            <DialogClose render={<Button type="button" />}>Apply filters</DialogClose>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setAction("all");
+                setEntity("all");
+                setUserId("");
+                setSortBy("created_at");
+                setSortAsc(false);
+                setDateFrom("");
+                setDateTo("");
+                resetPage();
+              }}
+            >
+              Reset filters
+            </Button>
+            <DialogClose render={<Button type="button" />}>
+              Apply filters
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -563,7 +678,7 @@ export default function AuditLogPage() {
         open={Boolean(selected)}
         onOpenChange={(open) => !open && setSelected(null)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-6xl">
           <DialogHeader>
             <DialogTitle>Audit activity details</DialogTitle>
             <DialogDescription>

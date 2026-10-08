@@ -310,7 +310,7 @@ export default function DepartmentPage() {
           </p>
         </div>
         {currentUserRole === "ADMIN" && (
-          <Button onClick={openCreate}>
+          <Button className="w-full sm:w-auto" onClick={openCreate}>
             <Plus /> Add department
           </Button>
         )}
@@ -339,14 +339,14 @@ export default function DepartmentPage() {
             </div>
             <Button
               variant="outline"
-              size="icon"
-              title="Toggle sort by name"
+              className="w-full sm:w-auto px-2 gap-1"
+              title="Toggle sort by Department name"
               onClick={() => {
                 setSortAsc((value) => !value);
                 setPage(1);
               }}
             >
-              {sortAsc ? <ArrowDown /> : <ArrowUp />}
+              {sortAsc ? <ArrowDown /> : <ArrowUp />} Sort
             </Button>
           </div>
         </CardHeader>

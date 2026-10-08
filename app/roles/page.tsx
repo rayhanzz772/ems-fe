@@ -306,19 +306,19 @@ export default function RolesPage() {
             Manage application roles and their availability.
           </p>
         </div>
-        <Button onClick={openCreate}>
+        <Button className="w-full sm:w-auto" onClick={openCreate}>
           <Plus /> Add role
         </Button>
       </div>
 
       <Card>
-        <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <CardHeader className="gap-4">
           <div>
             <CardTitle>Role list</CardTitle>
             <CardDescription>View and manage access roles.</CardDescription>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row">
+            <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
@@ -327,11 +327,12 @@ export default function RolesPage() {
                   setPage(1);
                 }}
                 placeholder="Search roles..."
-                className="pl-9"
+                className="w-full pl-9"
               />
             </div>
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => setSortAsc((value) => !value)}
             >
               {sortAsc ? <ArrowUp /> : <ArrowDown />} Name

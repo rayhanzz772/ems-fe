@@ -27,7 +27,7 @@ export function Header() {
     pathname === "/employee" ||
     pathname === "/audit-log" ||
     pathname === "/audit-logs" ||
-    pathname === "/api-docs" ||
+    pathname === "/api-documentation" ||
     pathname === "/roles";
   const showLogo = pathname === "/login" || pathname === "/register";
 
@@ -96,9 +96,7 @@ export function Header() {
     }
   };
 
-  const userInitials = userEmail
-    ? userEmail.slice(0, 2).toUpperCase()
-    : "--";
+  const userInitials = userEmail ? userEmail.slice(0, 2).toUpperCase() : "--";
   const userLabel = userEmail ?? (userLoadError ? "Unavailable" : "Loading...");
   const breadcrumb = {
     "/dashboard": { section: "Overview", label: "Dashboard" },
@@ -107,7 +105,7 @@ export function Header() {
     "/employee": { section: "Management", label: "Employees" },
     "/audit-log": { section: "Other", label: "Audit Log" },
     "/audit-logs": { section: "Other", label: "Audit Log" },
-    "/api-docs": { section: "Other", label: "API Docs" },
+    "/api-documentation": { section: "Other", label: "API Docs" },
     "/roles": { section: "Management", label: "Roles" },
   }[pathname];
 

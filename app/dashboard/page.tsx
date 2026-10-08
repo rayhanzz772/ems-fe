@@ -201,15 +201,20 @@ export default function DashboardPage() {
             Here&apos;s what&apos;s happening across your organization today.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           <Button
             nativeButton={false}
             variant="outline"
+            className="w-full sm:w-auto"
             render={<Link href="/audit-logs" />}
           >
             <Activity /> View activity
           </Button>
-          <Button nativeButton={false} render={<Link href="/employee" />}>
+          <Button
+            className="w-full sm:w-auto"
+            nativeButton={false}
+            render={<Link href="/employee" />}
+          >
             <Plus /> Add employee
           </Button>
         </div>

@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   Search,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import {
@@ -205,6 +206,7 @@ export default function EmployeePage() {
   >([]);
   const [hireDateFrom, setHireDateFrom] = useState("");
   const [hireDateTo, setHireDateTo] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selected, setSelected] = useState<Employee | null>(null);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
@@ -455,12 +457,12 @@ export default function EmployeePage() {
             Manage your team members and employee information.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportCsv}>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Button className="w-full sm:w-auto" variant="outline" onClick={exportCsv}>
             <Download /> Export CSV
           </Button>
           {currentUserRole === "ADMIN" && (
-            <Button onClick={openCreate}>
+            <Button className="w-full sm:w-auto" onClick={openCreate}>
               <Plus /> Add employee
             </Button>
           )}
@@ -475,7 +477,7 @@ export default function EmployeePage() {
               Search and manage all employees in your organization.
             </CardDescription>
           </div>
-          <div className="flex flex-col gap-3 lg:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
               <Input
@@ -488,87 +490,13 @@ export default function EmployeePage() {
                 className="pl-9"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                aria-label="Filter by status"
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value);
-                  setPage(1);
-                }}
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              <select
-                aria-label="Filter by department"
-                value={departmentFilter}
-                onChange={(event) => {
-                  setDepartmentFilter(event.target.value);
-                  setPage(1);
-                }}
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All departments</option>
-                {departmentOptions.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                variant="outline"
-                size="icon"
-                title="Toggle sort by name"
-                onClick={() => setSortAsc((value) => !value)}
-              >
-                {sortAsc ? <ArrowDown /> : <ArrowUp />}
-              </Button>
-              <select
-                aria-label="Sort employees by"
-                value={sortBy}
-                onChange={(event) => {
-                  setSortBy(event.target.value);
-                  setPage(1);
-                }}
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="first_name">First name</option>
-                <option value="last_name">Last name</option>
-                <option value="employee_code">Employee code</option>
-                <option value="email">Email</option>
-                <option value="department_name">Department</option>
-                <option value="position">Position</option>
-                <option value="status">Status</option>
-                <option value="hire_date">Hire date</option>
-                <option value="created_at">Created date</option>
-                <option value="updated_at">Updated date</option>
-              </select>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Input
-                type="date"
-                aria-label="Hire date from"
-                value={hireDateFrom}
-                onChange={(event) => {
-                  setHireDateFrom(event.target.value);
-                  setPage(1);
-                }}
-                className="w-auto"
-              />
-              <Input
-                type="date"
-                aria-label="Hire date to"
-                value={hireDateTo}
-                onChange={(event) => {
-                  setHireDateTo(event.target.value);
-                  setPage(1);
-                }}
-                className="w-auto"
-              />
-            </div>
+            <Button
+              variant="outline"
+              className="w-full shrink-0 sm:w-auto"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <SlidersHorizontal /> Filters
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -737,6 +665,136 @@ export default function EmployeePage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-h-none">
+          <DialogHeader>
+            <DialogTitle>Filter employees</DialogTitle>
+            <DialogDescription>
+              Refine the employee list by status, department, sorting, or hire
+              date.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="employee-status-filter">Status</Label>
+              <select
+                id="employee-status-filter"
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="all">All status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="employee-department-filter">Department</Label>
+              <select
+                id="employee-department-filter"
+                value={departmentFilter}
+                onChange={(event) => {
+                  setDepartmentFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="all">All departments</option>
+                {departmentOptions.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="employee-sort-filter">Sort by</Label>
+                <select
+                  id="employee-sort-filter"
+                  value={sortBy}
+                  onChange={(event) => {
+                    setSortBy(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="first_name">First name</option>
+                  <option value="last_name">Last name</option>
+                  <option value="employee_code">Employee code</option>
+                  <option value="email">Email</option>
+                  <option value="department_name">Department</option>
+                  <option value="position">Position</option>
+                  <option value="status">Status</option>
+                  <option value="hire_date">Hire date</option>
+                  <option value="created_at">Created date</option>
+                  <option value="updated_at">Updated date</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Order</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSortAsc((value) => !value)}
+                >
+                  {sortAsc ? <ArrowDown /> : <ArrowUp />}
+                  {sortAsc ? "Ascending" : "Descending"}
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="employee-hire-date-from">Hire date from</Label>
+                <Input
+                  id="employee-hire-date-from"
+                  type="date"
+                  value={hireDateFrom}
+                  onChange={(event) => {
+                    setHireDateFrom(event.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="employee-hire-date-to">Hire date to</Label>
+                <Input
+                  id="employee-hire-date-to"
+                  type="date"
+                  value={hireDateTo}
+                  onChange={(event) => {
+                    setHireDateTo(event.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setStatusFilter("all");
+                setDepartmentFilter("all");
+                setSortBy("first_name");
+                setSortAsc(true);
+                setHireDateFrom("");
+                setHireDateTo("");
+                setPage(1);
+              }}
+            >
+              Reset filters
+            </Button>
+            <DialogClose render={<Button type="button" />}>Apply filters</DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(selected)}

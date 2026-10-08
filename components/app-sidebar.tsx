@@ -37,7 +37,7 @@ export function AppSidebar() {
     pathname === "/employee" ||
     pathname === "/audit-log" ||
     pathname === "/audit-logs" ||
-    pathname === "/api-docs";
+    pathname === "/api-documentation";
   const isRoleRoute = pathname === "/roles";
 
   useEffect(() => {
@@ -134,11 +134,11 @@ export function AppSidebar() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link href="/api-docs" />}
-                isActive={pathname === "/api-docs"}
+                render={<Link href="/api-documentation" />}
+                isActive={pathname === "/api-documentation"}
               >
                 <FileCodeCorner aria-hidden="true" />
-                <span>API Docs</span>
+                <span>API Documentation</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

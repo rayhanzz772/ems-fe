@@ -8,6 +8,7 @@ import {
   Eye,
   Pencil,
   Search,
+  SlidersHorizontal,
   SquarePen,
   Trash,
 } from "lucide-react";
@@ -180,6 +181,7 @@ export default function AuditLogPage() {
   const [selected, setSelected] = useState<AuditLog | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AuditLog | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 5;
 
   const loadLogs = useCallback(async () => {
@@ -291,7 +293,7 @@ export default function AuditLogPage() {
             Track important changes made across your organization.
           </p>
         </div>
-        <Button variant="outline" onClick={exportCsv}>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={exportCsv}>
           <Download /> Export CSV
         </Button>
       </section>
@@ -302,8 +304,8 @@ export default function AuditLogPage() {
             <CardTitle>Activity history</CardTitle>
             <CardDescription>Review who changed what and when.</CardDescription>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="relative lg:col-span-2">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
               <Input
                 value={query}
@@ -315,82 +317,13 @@ export default function AuditLogPage() {
                 className="pl-9"
               />
             </div>
-            <select
-              aria-label="Filter by action"
-              value={action}
-              onChange={(event) => {
-                setAction(event.target.value);
-                resetPage();
-              }}
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-            >
-              <option value="all">All actions</option>
-              <option value="CREATE">Create</option>
-              <option value="UPDATE">Update</option>
-              <option value="DELETE">Delete</option>
-            </select>
-            <select
-              aria-label="Filter by entity"
-              value={entity}
-              onChange={(event) => {
-                setEntity(event.target.value);
-                resetPage();
-              }}
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-            >
-              <option value="all">All entities</option>
-              <option value="Employee">Employee</option>
-              <option value="User">User</option>
-              <option value="Department">Department</option>
-            </select>
-            <Input
-              aria-label="Filter by user ID"
-              value={userId}
-              onChange={(event) => {
-                setUserId(event.target.value);
-                resetPage();
-              }}
-              placeholder="User ID"
-            />
             <Button
               variant="outline"
-              onClick={() => setSortAsc((value) => !value)}
+              className="w-full shrink-0 sm:w-auto"
+              onClick={() => setFiltersOpen(true)}
             >
-              {sortAsc ? <ArrowUp /> : <ArrowDown />} Date
+              <SlidersHorizontal /> Filters
             </Button>
-            <select
-              aria-label="Sort audit logs by"
-              value={sortBy}
-              onChange={(event) => {
-                setSortBy(event.target.value);
-                resetPage();
-              }}
-              className="h-9 rounded-md border bg-background px-3 text-sm"
-            >
-              <option value="created_at">Created date</option>
-              <option value="action">Action</option>
-              <option value="entity">Entity</option>
-              <option value="entity_id">Entity ID</option>
-              <option value="user_email">User email</option>
-            </select>
-            <Input
-              aria-label="Filter from date"
-              type="date"
-              value={dateFrom}
-              onChange={(event) => {
-                setDateFrom(event.target.value);
-                resetPage();
-              }}
-            />
-            <Input
-              aria-label="Filter to date"
-              type="date"
-              value={dateTo}
-              onChange={(event) => {
-                setDateTo(event.target.value);
-                resetPage();
-              }}
-            />
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -565,6 +498,69 @@ export default function AuditLogPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Filter audit logs</DialogTitle>
+            <DialogDescription>
+              Refine activity by action, entity, user, date, or sorting.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label htmlFor="audit-action-filter" className="text-sm font-medium">Action</label>
+                <select id="audit-action-filter" value={action} onChange={(event) => { setAction(event.target.value); resetPage(); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                  <option value="all">All actions</option>
+                  <option value="CREATE">Create</option>
+                  <option value="UPDATE">Update</option>
+                  <option value="DELETE">Delete</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="audit-entity-filter" className="text-sm font-medium">Entity</label>
+                <select id="audit-entity-filter" value={entity} onChange={(event) => { setEntity(event.target.value); resetPage(); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                  <option value="all">All entities</option>
+                  <option value="Employee">Employee</option>
+                  <option value="User">User</option>
+                  <option value="Department">Department</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="audit-user-filter" className="text-sm font-medium">User ID</label>
+              <Input id="audit-user-filter" value={userId} onChange={(event) => { setUserId(event.target.value); resetPage(); }} placeholder="User ID" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label htmlFor="audit-sort-filter" className="text-sm font-medium">Sort by</label>
+                <select id="audit-sort-filter" value={sortBy} onChange={(event) => { setSortBy(event.target.value); resetPage(); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                  <option value="created_at">Created date</option>
+                  <option value="action">Action</option>
+                  <option value="entity">Entity</option>
+                  <option value="entity_id">Entity ID</option>
+                  <option value="user_email">User email</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Order</label>
+                <Button type="button" variant="outline" className="w-full" onClick={() => setSortAsc((value) => !value)}>
+                  {sortAsc ? <ArrowUp /> : <ArrowDown />} {sortAsc ? "Ascending" : "Descending"}
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2"><label htmlFor="audit-date-from" className="text-sm font-medium">Date from</label><Input id="audit-date-from" type="date" value={dateFrom} onChange={(event) => { setDateFrom(event.target.value); resetPage(); }} /></div>
+              <div className="space-y-2"><label htmlFor="audit-date-to" className="text-sm font-medium">Date to</label><Input id="audit-date-to" type="date" value={dateTo} onChange={(event) => { setDateTo(event.target.value); resetPage(); }} /></div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => { setAction("all"); setEntity("all"); setUserId(""); setSortBy("created_at"); setSortAsc(false); setDateFrom(""); setDateTo(""); resetPage(); }}>Reset filters</Button>
+            <DialogClose render={<Button type="button" />}>Apply filters</DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(selected)}

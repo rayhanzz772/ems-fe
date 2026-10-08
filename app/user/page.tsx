@@ -8,6 +8,7 @@ import {
   Pencil,
   Plus,
   Search,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import {
@@ -158,6 +159,7 @@ export default function UsersPage() {
   const [rolesLoading, setRolesLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 10;
   const sortOrder = sortAsc ? "ASC" : "DESC";
 
@@ -384,7 +386,7 @@ export default function UsersPage() {
           </p>
         </div>
         {currentUserRole === "ADMIN" && (
-          <Button onClick={openCreate}>
+          <Button className="w-full sm:w-auto" onClick={openCreate}>
             <Plus /> Add user
           </Button>
         )}
@@ -398,7 +400,7 @@ export default function UsersPage() {
               Search and manage login accounts in your organization.
             </CardDescription>
           </div>
-          <div className="flex flex-col gap-3 lg:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
               <Input
@@ -410,46 +412,13 @@ export default function UsersPage() {
                 className="pl-9"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                aria-label="Filter by role"
-                value={roleFilter}
-                onChange={(event) =>
-                  resetAndSearch(setRoleFilter, event.target.value)
-                }
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All roles</option>
-                {availableRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-              <select
-                aria-label="Filter by status"
-                value={statusFilter}
-                onChange={(event) =>
-                  resetAndSearch(setStatusFilter, event.target.value)
-                }
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-              <Button
-                variant="outline"
-                size="icon"
-                title="Toggle sort by email"
-                onClick={() => {
-                  setSortAsc((value) => !value);
-                  setPage(1);
-                }}
-              >
-                {sortAsc ? <ArrowDown /> : <ArrowUp />}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              className="w-full shrink-0 sm:w-auto"
+              onClick={() => setFiltersOpen(true)}
+            >
+              <SlidersHorizontal /> Filters
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -629,6 +598,44 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Filter users</DialogTitle>
+            <DialogDescription>
+              Refine the user list by role, status, or email sorting.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <label htmlFor="user-role-filter" className="text-sm font-medium">Role</label>
+              <select id="user-role-filter" value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setPage(1); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                <option value="all">All roles</option>
+                {availableRoles.map((role) => <option key={role} value={role}>{role}</option>)}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="user-status-filter" className="text-sm font-medium">Status</label>
+              <select id="user-status-filter" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                <option value="all">All status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">Sort by email</span>
+              <Button type="button" variant="outline" onClick={() => setSortAsc((value) => !value)}>
+                {sortAsc ? <ArrowDown /> : <ArrowUp />} {sortAsc ? "Ascending" : "Descending"}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => { setRoleFilter("all"); setStatusFilter("all"); setSortAsc(true); setPage(1); }}>Reset filters</Button>
+            <DialogClose render={<Button type="button" />}>Apply filters</DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={Boolean(selected)}

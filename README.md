@@ -1,33 +1,33 @@
 # Employee Management System — Frontend
 
-Frontend untuk Employee Management System (EMS), dibangun dengan Next.js, React, TypeScript, Tailwind CSS, shadcn/Base UI, Recharts, dan TanStack Query.
+Frontend for the Employee Management System (EMS), built with Next.js, React, TypeScript, Tailwind CSS, shadcn/Base UI, Recharts, and TanStack Query.
 
 ## Demo
 
 **Live demo:** [ems.rayhancreative.web.id](https://ems.rayhancreative.web.id)
 
-> Demo membutuhkan API backend yang aktif dan dapat diakses dari browser. Kredensial demo, jika tersedia, sebaiknya dibagikan melalui kanal terpisah dan tidak disimpan di repository.
+> The demo requires an active backend API that is accessible from the browser. If demo credentials are available, share them through a separate channel and do not store them in the repository.
 
-## Fitur utama
+## Main features
 
-- Authentication: login, logout, validasi session, dan redirect otomatis.
+- Authentication: login, logout, session validation, and automatic redirects.
 - Protected experience:
-  - pengguna yang sudah login dan membuka `/login` diarahkan ke `/dashboard`;
-  - halaman aplikasi memvalidasi user melalui endpoint `get-me`.
-- Dashboard dengan ringkasan employee, chart department, status employee, dan aktivitas terbaru.
+  - authenticated users who open `/login` are redirected to `/dashboard`;
+  - application pages validate the current user through the `get-me` endpoint.
+- Dashboard with employee summaries, department charts, employee status, and recent activity.
 - Employee management:
-  - list, search, filter, sort, pagination;
-  - detail, create, update, soft-delete;
-  - toggle status aktif/nonaktif;
-  - export CSV.
-- User management dengan role dinamis dari API.
-- Department management dengan employee count dan status.
-- Role management khusus administrator.
-- Audit log dengan filter, sorting, detail, delete, dan export CSV.
-- API Documentation/request tester berbasis OpenAPI.
-- Loading state, skeleton, empty state, error state, toast notification, dan responsive mobile layout.
-- TanStack Query untuk caching, refetch, dan invalidasi data setelah mutation.
-- Dark mode dan komponen UI berbasis shadcn/Base UI.
+  - list, search, filter, sort, and pagination;
+  - detail, create, update, and soft-delete;
+  - active/inactive status toggle;
+  - CSV export.
+- User management with roles loaded dynamically from the API.
+- Department management with employee counts and status controls.
+- Role management for administrators.
+- Audit logs with filtering, sorting, detail view, deletion, and CSV export.
+- OpenAPI-based API documentation and request tester.
+- Loading, skeleton, empty, error, toast, and responsive mobile states.
+- TanStack Query for caching, refetching, and post-mutation cache invalidation.
+- Dark mode and shadcn/Base UI components.
 
 ## Tech stack
 
@@ -41,119 +41,117 @@ Frontend untuk Employee Management System (EMS), dibangun dengan Next.js, React,
 - Lucide React
 - ESLint
 
-## Prasyarat
+## Prerequisites
 
-Pastikan perangkat sudah memiliki:
+Make sure the following are installed and available:
 
-- Node.js versi LTS yang kompatibel dengan Next.js 16.
+- An LTS version of Node.js compatible with Next.js 16.
 - npm.
-- Backend EMS yang berjalan dan dapat diakses.
-- API URL serta URL OpenAPI dari backend.
+- A running and accessible EMS backend.
+- The backend API URL and OpenAPI URL.
 
-## Setup lokal
+## Local setup
 
-### 1. Clone repository
+### 1. Clone the repository
 
 ```bash
 git clone <repository-url>
 cd ems-fe
 ```
 
-### 2. Install dependency
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Buat environment file
+### 3. Create the environment file
 
-Buat file `.env.local` di root project:
+Create a `.env.local` file in the project root:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 NEXT_PUBLIC_API_DOCS_URL=http://localhost:8000/api-docs/openapi.json
 ```
 
-Keterangan:
-
-| Variable | Keterangan |
+| Variable | Description |
 | --- | --- |
-| `NEXT_PUBLIC_API_URL` | Base URL API backend tanpa trailing slash |
-| `NEXT_PUBLIC_API_DOCS_URL` | URL OpenAPI JSON untuk halaman API Documentation |
+| `NEXT_PUBLIC_API_URL` | Backend API base URL without a trailing slash |
+| `NEXT_PUBLIC_API_DOCS_URL` | OpenAPI JSON URL used by the API Documentation page |
 
-Jangan menyimpan secret, access token, atau credential production di `.env.local` yang di-commit ke repository.
+Do not commit secrets, access tokens, or production credentials to `.env.local`.
 
-### 4. Jalankan development server
+### 4. Run the development server
 
 ```bash
 npm run dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000).
 
-### 5. Jalankan production build lokal
+### 5. Run a local production build
 
 ```bash
 npm run build
 npm run start
 ```
 
-Production server dapat diakses melalui [http://localhost:3000](http://localhost:3000), kecuali port diubah oleh konfigurasi atau environment.
+The production server is available at [http://localhost:3000](http://localhost:3000), unless the port is changed by configuration or environment variables.
 
-## Struktur route frontend
+## Frontend routes
 
-| Route | Keterangan | Akses |
+| Route | Description | Access |
 | --- | --- | --- |
 | `/` | Redirect/landing entry point | Public |
-| `/login` | Login | Public |
-| `/dashboard` | Ringkasan sistem dan chart | Login |
-| `/employees` | Manajemen employee | Login |
-| `/departments` | Manajemen department | Login |
-| `/users` | Manajemen user | Login |
-| `/roles` | Manajemen role | Admin |
-| `/audit-logs` | Audit log | Login |
-| `/api-documentation` | Mini API documentation/request tester | Login |
+| `/login` | Login page | Public |
+| `/dashboard` | System summary and charts | Authenticated |
+| `/employees` | Employee management | Authenticated |
+| `/departments` | Department management | Authenticated |
+| `/users` | User management | Authenticated |
+| `/roles` | Role management | Admin |
+| `/audit-logs` | Audit logs | Authenticated |
+| `/api-documentation` | Mini API documentation/request tester | Authenticated |
 
-## Endpoint API
+## API endpoints
 
-Semua path di bawah ini relatif terhadap:
+All paths below are relative to:
 
 ```text
 ${NEXT_PUBLIC_API_URL}
 ```
 
-Contoh: `/employees` menjadi `http://localhost:8000/api/v1/employees`.
+For example, `/employees` becomes `http://localhost:8000/api/v1/employees`.
 
 ### Authentication
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `POST` | `/auth/login` | Login dan menerima token |
-| `GET` | `/auth/get-me` | Mengambil user yang sedang login |
-| `POST` | `/auth/logout` | Logout dan menghapus token lokal |
+| `POST` | `/auth/login` | Sign in and receive an access token |
+| `GET` | `/auth/get-me` | Get the currently authenticated user |
+| `POST` | `/auth/logout` | Sign out and remove the local token |
 
-Token disimpan di `localStorage` dengan key `access_token` dan dikirim sebagai Bearer token oleh API client.
+The token is stored in `localStorage` under the `access_token` key and sent as a Bearer token by the API client.
 
 ### Dashboard
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/dashboard` | Mengambil summary, chart data, dan recent activity |
+| `GET` | `/dashboard` | Get summary data, chart data, and recent activity |
 
 ### Employees
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/employees` | List employee |
-| `GET` | `/employees/:id/detail` | Detail employee |
-| `POST` | `/employees/create` | Membuat employee; admin |
-| `PUT` | `/employees/:id/update` | Memperbarui employee; admin |
-| `DELETE` | `/employees/:id/delete` | Soft-delete employee; admin |
-| `PATCH` | `/employees/:id/status` | Mengubah status employee; admin |
-| `GET` | `/employees/export` | Export employee ke CSV |
-| `GET` | `/employees/get-all-departments` | Mengambil pilihan department |
+| `GET` | `/employees` | List employees |
+| `GET` | `/employees/:id/detail` | Get employee details |
+| `POST` | `/employees/create` | Create an employee; admin only |
+| `PUT` | `/employees/:id/update` | Update an employee; admin only |
+| `DELETE` | `/employees/:id/delete` | Soft-delete an employee; admin only |
+| `PATCH` | `/employees/:id/status` | Update employee status; admin only |
+| `GET` | `/employees/export` | Export employees as CSV |
+| `GET` | `/employees/get-all-departments` | Get department options |
 
-Parameter list yang digunakan frontend:
+Employee list parameters used by the frontend:
 
 ```text
 page
@@ -168,7 +166,7 @@ sort_by
 sort_order
 ```
 
-Payload create/update employee umumnya berisi:
+Typical employee create/update payload:
 
 ```json
 {
@@ -184,52 +182,52 @@ Payload create/update employee umumnya berisi:
 }
 ```
 
-`employee_code` dibuat oleh server dan tidak perlu dikirim oleh frontend.
+The `employee_code` is generated by the server and does not need to be sent by the frontend.
 
 ### Users
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/users` | List user |
-| `GET` | `/users/get-all-roles` | Mengambil daftar role untuk filter/form |
-| `POST` | `/users/create` | Membuat user; admin |
-| `PUT` | `/users/:id/update` | Memperbarui user; admin |
-| `PATCH` | `/users/:id/status` | Mengubah status user; admin |
-| `DELETE` | `/users/:id/delete` | Soft-delete user; admin |
+| `GET` | `/users` | List users |
+| `GET` | `/users/get-all-roles` | Get roles for filters and forms |
+| `POST` | `/users/create` | Create a user; admin only |
+| `PUT` | `/users/:id/update` | Update a user; admin only |
+| `PATCH` | `/users/:id/status` | Update user status; admin only |
+| `DELETE` | `/users/:id/delete` | Soft-delete a user; admin only |
 
 ### Departments
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/departments` | List department |
-| `GET` | `/departments/:id/detail` | Detail department |
-| `POST` | `/departments/create` | Membuat department; admin |
-| `PUT` | `/departments/:id/update` | Memperbarui department; admin |
-| `PATCH` | `/departments/:id/status` | Mengubah status department; admin |
-| `DELETE` | `/departments/:id/delete` | Soft-delete department; admin |
+| `GET` | `/departments` | List departments |
+| `GET` | `/departments/:id/detail` | Get department details |
+| `POST` | `/departments/create` | Create a department; admin only |
+| `PUT` | `/departments/:id/update` | Update a department; admin only |
+| `PATCH` | `/departments/:id/status` | Update department status; admin only |
+| `DELETE` | `/departments/:id/delete` | Soft-delete a department; admin only |
 
 ### Roles
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/roles` | List role |
-| `GET` | `/roles/:id/detail` | Detail role |
-| `POST` | `/roles/create` | Membuat role; admin |
-| `PUT` | `/roles/:id/update` | Memperbarui role; admin |
-| `PATCH` | `/roles/:id/status` | Mengubah status role; admin |
-| `DELETE` | `/roles/:id/delete` | Soft-delete role; admin |
+| `GET` | `/roles` | List roles |
+| `GET` | `/roles/:id/detail` | Get role details |
+| `POST` | `/roles/create` | Create a role; admin only |
+| `PUT` | `/roles/:id/update` | Update a role; admin only |
+| `PATCH` | `/roles/:id/status` | Update role status; admin only |
+| `DELETE` | `/roles/:id/delete` | Soft-delete a role; admin only |
 
-Role `ADMIN` tidak dapat dinonaktifkan dari UI.
+The `ADMIN` role cannot be deactivated from the UI.
 
 ### Audit logs
 
-| Method | Endpoint | Keterangan |
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/audit-logs` | List audit log |
-| `DELETE` | `/audit-logs/:id/delete` | Menghapus audit log |
-| `GET` | `/audit-logs/export` | Export audit log ke CSV |
+| `GET` | `/audit-logs` | List audit logs |
+| `DELETE` | `/audit-logs/:id/delete` | Delete an audit log |
+| `GET` | `/audit-logs/export` | Export audit logs as CSV |
 
-Parameter audit log yang digunakan:
+Audit log parameters used by the frontend:
 
 ```text
 page
@@ -244,9 +242,9 @@ sort_by
 sort_order
 ```
 
-## Format response pagination
+## Pagination response format
 
-Frontend membaca total data dari `metadata.total_row` bila tersedia. Bentuk response yang diharapkan:
+The frontend reads the total record count from `metadata.total_row` when available. The expected response shape is:
 
 ```json
 {
@@ -262,62 +260,62 @@ Frontend membaca total data dari `metadata.total_row` bila tersedia. Bentuk resp
 }
 ```
 
-## Hak akses
+## Access control
 
-Semua endpoint membutuhkan autentikasi. Secara umum:
+All API endpoints require authentication. In general:
 
-| Role | Akses |
+| Role | Access |
 | --- | --- |
-| `ADMIN` | Melihat data dan melakukan create, update, delete, status, export, serta mengelola roles |
-| `HR` | Melihat data sesuai izin backend |
-| `EMPLOYEE` | Melihat data sesuai izin backend |
+| `ADMIN` | View data, create, update, delete, change status, export, and manage roles |
+| `HR` | View data according to backend permissions |
+| `EMPLOYEE` | View data according to backend permissions |
 
-Pembatasan di frontend hanya untuk UX. Otorisasi final tetap harus dilakukan oleh backend.
+Frontend restrictions are intended for user experience only. Final authorization must always be enforced by the backend.
 
-## Testing, lint, dan validasi
+## Testing, linting, and validation
 
-Saat ini `package.json` menyediakan script berikut:
+The current `package.json` provides these scripts:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-### Menjalankan lint
+### Run lint
 
 ```bash
 npm run lint
 ```
 
-### Menjalankan type-check
+### Run the TypeScript check
 
-Belum ada script khusus di `package.json`, sehingga gunakan:
+There is currently no dedicated script in `package.json`, so run:
 
 ```bash
 npx tsc --noEmit
 ```
 
-### Menjalankan production validation
+### Run production validation
 
 ```bash
 npm run build
 ```
 
-Perintah ini memvalidasi kompilasi Next.js, TypeScript, static generation, dan optimasi production.
+This validates Next.js compilation, TypeScript, static generation, and production optimization.
 
-### Unit/integration test
+### Unit/integration tests
 
-Repository ini belum memiliki test runner atau script `npm test`. Jika test runner ditambahkan kemudian, dokumentasi ini perlu diperbarui dengan command dan lokasi test yang sesuai.
+This repository currently does not include a test runner or an `npm test` script. Update this documentation with the appropriate command and test locations if a test runner is added.
 
 ## API Documentation
 
-Halaman API Documentation menggunakan OpenAPI JSON dari:
+The API Documentation page loads its OpenAPI JSON from:
 
 ```env
 NEXT_PUBLIC_API_DOCS_URL=http://localhost:8000/api-docs/openapi.json
 ```
 
-Buka halaman berikut setelah aplikasi berjalan:
+After starting the application, open:
 
 ```text
 http://localhost:3000/api-documentation
@@ -325,35 +323,35 @@ http://localhost:3000/api-documentation
 
 ## Troubleshooting
 
-### API request gagal atau muncul `NEXT_PUBLIC_API_URL is not configured`
+### API requests fail or `NEXT_PUBLIC_API_URL is not configured` appears
 
-Pastikan `.env.local` tersedia di root project dan restart development server setelah mengubah environment variable:
+Make sure `.env.local` exists in the project root and restart the development server after changing environment variables:
 
 ```bash
 npm run dev
 ```
 
-### Terlempar kembali ke `/login`
+### The application redirects back to `/login`
 
-Periksa hal berikut:
+Check the following:
 
-- backend dapat diakses dari browser;
-- token `access_token` masih valid;
-- endpoint `/auth/get-me` mengembalikan HTTP 200;
-- konfigurasi CORS backend mengizinkan origin frontend;
-- cookie/session backend dikirim dengan konfigurasi yang benar.
+- the backend is accessible from the browser;
+- the `access_token` is still valid;
+- `/auth/get-me` returns HTTP 200;
+- the backend CORS configuration allows the frontend origin;
+- backend cookies/session settings are configured correctly.
 
-### Data tidak tampil tetapi aplikasi berhasil build
+### Data does not appear even though the build succeeds
 
-Build hanya memvalidasi aplikasi frontend. Pastikan backend aktif, base URL benar, dan response API mengikuti format yang didokumentasikan.
+The build only validates the frontend. Make sure the backend is running, the base URL is correct, and API responses follow the documented format.
 
-## Catatan pengembangan
+## Development notes
 
-- Gunakan API helper terpusat di `lib/api.ts`.
-- Gunakan TanStack Query untuk data server baru agar caching dan invalidasi konsisten.
-- Pertahankan state form, dialog, dan filter sebagai state lokal bila tidak perlu dibagikan.
-- Jangan menaruh credential atau token ke source code.
-- Setelah mengubah fitur utama, jalankan minimal:
+- Use the centralized API helper in `lib/api.ts`.
+- Use TanStack Query for new server data so caching and invalidation remain consistent.
+- Keep form, dialog, and filter state local unless it needs to be shared.
+- Never put credentials or tokens in source code.
+- After changing a major feature, run at least:
 
 ```bash
 npx tsc --noEmit
@@ -361,6 +359,6 @@ npm run lint
 npm run build
 ```
 
-## Lisensi
+## License
 
-Lisensi proyek belum ditentukan. Tambahkan file `LICENSE` dan ubah bagian ini jika repository akan didistribusikan secara publik.
+No license has been specified for this project yet. Add a `LICENSE` file and update this section if the repository will be distributed publicly.

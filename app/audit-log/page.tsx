@@ -9,12 +9,7 @@ import {
   Eye,
   Search,
 } from "lucide-react";
-import {
-  ApiError,
-  api,
-  getPaginationTotal,
-  type ApiResponse,
-} from "@/lib/api";
+import { ApiError, api, getPaginationTotal, type ApiResponse } from "@/lib/api";
 import {
   Button,
   Card,
@@ -66,23 +61,25 @@ type AuditLogApi = Omit<AuditLog, "id" | "user_id" | "entity_id"> & {
   entity_id: string | number;
 };
 
-type AuditLogListData = AuditLogApi[] | {
-  items?: AuditLogApi[];
-  results?: AuditLogApi[];
-  audit_logs?: AuditLogApi[];
-  total?: number;
-  total_count?: number;
-  pagination?: {
-    total?: number;
-    total_count?: number;
-  };
-};
+type AuditLogListData =
+  | AuditLogApi[]
+  | {
+      items?: AuditLogApi[];
+      results?: AuditLogApi[];
+      audit_logs?: AuditLogApi[];
+      total?: number;
+      total_count?: number;
+      pagination?: {
+        total?: number;
+        total_count?: number;
+      };
+    };
 
 function getTotal(
   data: AuditLogListData,
   metadata: Record<string, unknown> | undefined,
   itemCount: number,
-) : number {
+): number {
   const metadataTotal =
     typeof metadata?.total === "number" ? metadata.total : undefined;
   const metadataTotalCount =
@@ -188,7 +185,7 @@ export default function AuditLogPage() {
       const data = response.data;
       const items = Array.isArray(data)
         ? data
-        : data.items ?? data.results ?? data.audit_logs ?? [];
+        : (data.items ?? data.results ?? data.audit_logs ?? []);
       setLogs(items.map(normalizeLog));
       setTotal(
         getPaginationTotal(
@@ -245,9 +242,6 @@ export default function AuditLogPage() {
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            Workspace / Compliance
-          </p>
           <h1 className="text-3xl font-semibold tracking-tight">Audit Log</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Track important changes made across your organization.
@@ -375,7 +369,10 @@ export default function AuditLogPage() {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={5}
+                      className="h-32 text-center text-muted-foreground"
+                    >
                       Loading audit logs...
                     </TableCell>
                   </TableRow>
@@ -433,8 +430,7 @@ export default function AuditLogPage() {
           </div>
           <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              {total ? (currentPage - 1) * pageSize + 1 : 0}-
+              Showing {total ? (currentPage - 1) * pageSize + 1 : 0}-
               {Math.min((currentPage - 1) * pageSize + logs.length, total)} of{" "}
               {total} activities
             </p>

@@ -204,9 +204,9 @@ export default function EmployeePage() {
 
     async function loadDepartmentOptions() {
       try {
-        const response = await api.get<
-          ApiResponse<DepartmentOption[]>
-        >("/employees/get-all-departments");
+        const response = await api.get<ApiResponse<DepartmentOption[]>>(
+          "/employees/get-all-departments",
+        );
         if (!cancelled) {
           setDepartmentOptions(response.data);
         }
@@ -409,9 +409,6 @@ export default function EmployeePage() {
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            Workspace / People
-          </p>
           <h1 className="text-3xl font-semibold tracking-tight">Employees</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage your team members and employee information.

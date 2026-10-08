@@ -132,14 +132,14 @@ export default function DepartmentPage() {
       const data = response.data;
       const items = Array.isArray(data)
         ? data
-        : data.items ?? data.results ?? data.departments ?? [];
+        : (data.items ?? data.results ?? data.departments ?? []);
       setDepartments(items.map(normalizeDepartment));
       setTotal(
         getPaginationTotal(
           response.metadata,
           Array.isArray(data)
             ? items.length
-            : data.total ?? data.total_count ?? items.length,
+            : (data.total ?? data.total_count ?? items.length),
         ),
       );
     } catch (requestError) {
@@ -242,9 +242,6 @@ export default function DepartmentPage() {
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            Workspace / Organization
-          </p>
           <h1 className="text-3xl font-semibold tracking-tight">Departments</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Organize your company units and team structure.
@@ -310,7 +307,10 @@ export default function DepartmentPage() {
               <TableBody>
                 {loading && (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={4}
+                      className="h-32 text-center text-muted-foreground"
+                    >
                       Loading departments...
                     </TableCell>
                   </TableRow>
@@ -380,12 +380,12 @@ export default function DepartmentPage() {
           </div>
           <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              {total
-                ? (currentPage - 1) * pageSize + 1
-                : 0}
-              -{Math.min((currentPage - 1) * pageSize + departments.length, total)} of{" "}
-              {total} departments
+              Showing {total ? (currentPage - 1) * pageSize + 1 : 0}-
+              {Math.min(
+                (currentPage - 1) * pageSize + departments.length,
+                total,
+              )}{" "}
+              of {total} departments
             </p>
             <Pagination className="mx-0 w-auto justify-end">
               <PaginationContent>

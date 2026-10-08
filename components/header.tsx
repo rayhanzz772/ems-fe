@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, LogOut, Moon, Sun } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -91,12 +92,47 @@ export function Header() {
     ? userEmail.slice(0, 2).toUpperCase()
     : "--";
   const userLabel = userEmail ?? (userLoadError ? "Unavailable" : "Loading...");
+  const breadcrumb = {
+    "/dashboard": { section: "Overview", label: "Dashboard" },
+    "/user": { section: "Management", label: "Users" },
+    "/department": { section: "Management", label: "Departments" },
+    "/employee": { section: "Management", label: "Employees" },
+    "/audit-log": { section: "Other", label: "Audit Log" },
+    "/audit-logs": { section: "Other", label: "Audit Log" },
+    "/api-docs": { section: "Other", label: "API Docs" },
+  }[pathname];
 
   return (
     <header className="z-10 h-16 w-full shrink-0 border-b bg-background">
       <div className="mx-auto flex h-full w-full items-center justify-between px-5">
         <div className="flex items-center gap-2">
           {showSidebar && <SidebarTrigger title="Toggle navigation" />}
+          {showSidebar && breadcrumb && (
+            <nav
+              aria-label="Breadcrumb"
+              className="hidden items-center gap-1 text-sm sm:flex"
+            >
+              <Link
+                href={
+                  breadcrumb.section === "Overview"
+                    ? "/dashboard"
+                    : breadcrumb.section === "Management"
+                      ? "/user"
+                      : "/audit-logs"
+                }
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {breadcrumb.section}
+              </Link>
+              <ChevronRight
+                aria-hidden="true"
+                className="size-4 text-muted-foreground"
+              />
+              <span className="font-medium text-foreground">
+                {breadcrumb.label}
+              </span>
+            </nav>
+          )}
           {showLogo && <BrandLogo />}
         </div>
 

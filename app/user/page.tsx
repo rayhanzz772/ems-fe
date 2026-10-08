@@ -293,9 +293,6 @@ export default function UsersPage() {
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-2 text-sm font-medium text-muted-foreground">
-            Workspace / Administration
-          </p>
           <h1 className="text-3xl font-semibold tracking-tight">Users</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage login accounts, roles, and access status.

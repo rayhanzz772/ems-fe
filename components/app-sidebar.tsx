@@ -8,6 +8,7 @@ import {
   UserGroup,
   IdCardLanyard,
   ClipboardMinus,
+  FileCodeCorner,
 } from "lucide-react";
 import {
   Sidebar,
@@ -91,7 +92,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Audit</SidebarGroupLabel>
+          <SidebarGroupLabel>Other</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -100,6 +101,15 @@ export function AppSidebar() {
               >
                 <ClipboardMinus aria-hidden="true" />
                 <span>Audit Log</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<Link href="/audit-log" />}
+                isActive={pathname === "/audit-log"}
+              >
+                <FileCodeCorner aria-hidden="true" />
+                <span>API Docs</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

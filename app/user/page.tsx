@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  Check,
   Eye,
   Pencil,
   Plus,
@@ -12,7 +11,6 @@ import {
   ShieldCheck,
   Trash2,
   UsersRound,
-  X,
 } from "lucide-react";
 import {
   Button,
@@ -30,6 +28,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Switch,
 } from "@/components/ui";
 import {
   Pagination,
@@ -88,6 +87,22 @@ function StatusBadge({ active }: { active: boolean }) {
       />
       {active ? "Active" : "Inactive"}
     </span>
+  );
+}
+
+function StatusToggle({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Switch
+      checked={active}
+      onCheckedChange={onClick}
+      aria-label={`Turn status ${active ? "off" : "on"}`}
+    />
   );
 }
 
@@ -304,7 +319,10 @@ export default function UsersPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge active={user.status} />
+                      <StatusToggle
+                        active={user.status}
+                        onClick={() => toggleStatus(user)}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -323,14 +341,6 @@ export default function UsersPage() {
                           onClick={() => openEdit(user)}
                         >
                           <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Toggle status"
-                          onClick={() => toggleStatus(user)}
-                        >
-                          {user.status ? <X /> : <Check />}
                         </Button>
                         <Button
                           variant="ghost"

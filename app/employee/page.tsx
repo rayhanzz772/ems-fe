@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  Check,
   Download,
   Eye,
   Pencil,
@@ -12,7 +11,6 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   Button,
@@ -30,6 +28,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Switch,
 } from "@/components/ui";
 import {
   Pagination,
@@ -195,6 +194,22 @@ function StatusBadge({ active }: { active: boolean }) {
       />
       {active ? "Active" : "Inactive"}
     </span>
+  );
+}
+
+function StatusToggle({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Switch
+      checked={active}
+      onCheckedChange={onClick}
+      aria-label={`Turn status ${active ? "off" : "on"}`}
+    />
   );
 }
 
@@ -460,7 +475,10 @@ export default function EmployeePage() {
                       {formatDate(employee.hire_date)}
                     </TableCell>
                     <TableCell>
-                      <StatusBadge active={employee.status} />
+                      <StatusToggle
+                        active={employee.status}
+                        onClick={() => toggleStatus(employee)}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -479,14 +497,6 @@ export default function EmployeePage() {
                           onClick={() => openEdit(employee)}
                         >
                           <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Toggle status"
-                          onClick={() => toggleStatus(employee)}
-                        >
-                          {employee.status ? <X /> : <Check />}
                         </Button>
                       </div>
                     </TableCell>

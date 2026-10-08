@@ -21,7 +21,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { BrandLogo } from "@/components/brand-logo";
+import { SidebarLogo } from "@/components/sidebar-logo";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -38,7 +38,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="px-2 py-2 flex items-start gap-1">
-          <BrandLogo className="text-lg" />
+          <SidebarLogo className="text-lg" />
         </div>
       </SidebarHeader>
       <SidebarContent>

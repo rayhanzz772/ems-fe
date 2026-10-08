@@ -411,26 +411,29 @@ export default function AuditLogPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={5}
-                      className="h-32 text-center text-muted-foreground"
-                    >
-                      <div className="space-y-3">
-                        {Array.from({ length: 4 }, (_, index) => (
-                          <div key={index} className="flex items-center gap-3">
-                            <Skeleton className="size-9 rounded-full" />
-                            <div className="space-y-2">
-                              <Skeleton className="h-4 w-48" />
-                              <Skeleton className="h-3 w-32" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+                {loading &&
+                  Array.from({ length: 5 }, (_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-28" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-64" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="ml-auto h-8 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="ml-auto h-8 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="ml-auto h-8 w-20" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 {visibleLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell>

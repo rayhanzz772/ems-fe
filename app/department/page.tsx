@@ -368,23 +368,23 @@ export default function DepartmentPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={5}
-                      className="h-32 text-center text-muted-foreground"
-                    >
-                      <div className="space-y-3">
-                        {Array.from({ length: 4 }, (_, index) => (
-                          <div key={index} className="flex items-center gap-3">
-                            <Skeleton className="size-9 rounded-full" />
-                            <Skeleton className="h-4 w-56" />
-                          </div>
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
+                {loading &&
+                  Array.from({ length: 4 }, (_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-28" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-64" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="ml-auto h-8 w-20" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 {visibleDepartments.map((department) => (
                   <TableRow key={department.id}>
                     <TableCell>

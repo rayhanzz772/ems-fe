@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowUpRight,
   Building2,
   CheckCircle2,
-  IdCardLanyard,
   Plus,
   ShieldCheck,
-  UserPlus,
   UsersRound,
 } from "lucide-react";
 import {
@@ -34,18 +33,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui";
-
-const departmentData = [
-  { name: "Engineering", employees: 42 },
-  { name: "Marketing", employees: 26 },
-  { name: "Finance", employees: 18 },
-  { name: "People", employees: 12 },
-];
-
-const statusData = [
-  { name: "Active", value: 116, fill: "var(--color-active)" },
-  { name: "Inactive", value: 12, fill: "var(--color-inactive)" },
-];
+import { ApiError, getDashboard, type DashboardData } from "@/lib/api";
 
 const departmentConfig = {
   employees: { label: "Employees", color: "var(--chart-2)" },
@@ -56,34 +44,92 @@ const statusConfig = {
   inactive: { label: "Inactive", color: "var(--muted-foreground)" },
 } satisfies ChartConfig;
 
-const recentActivities = [
-  {
-    text: "Admin created a new employee",
-    user: "alya.pratama@morrow.co",
-    time: "2 minutes ago",
-    icon: UserPlus,
-  },
-  {
-    text: "HR updated user status",
-    user: "nadia.hr@morrow.co",
-    time: "18 minutes ago",
-    icon: CheckCircle2,
-  },
-  {
-    text: "Admin updated department details",
-    user: "admin@morrow.co",
-    time: "1 hour ago",
-    icon: Building2,
-  },
-  {
-    text: "Admin changed an employee profile",
-    user: "admin@morrow.co",
-    time: "3 hours ago",
-    icon: IdCardLanyard,
-  },
-];
+function formatActivityDate(date: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(date));
+}
+
+function activityLabel(action: string, entity: string) {
+  return `${action.charAt(0)}${action.slice(1).toLowerCase()} ${entity.toLowerCase()}`;
+}
 
 export default function DashboardPage() {
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDashboard() {
+      try {
+        const data = await getDashboard();
+        if (!cancelled) setDashboard(data);
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(
+            requestError instanceof ApiError
+              ? requestError.message
+              : "Unable to load dashboard data.",
+          );
+        }
+      }
+    }
+
+    void loadDashboard();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (error) {
+    return (
+      <main className="mx-auto w-full max-w-[1600px] p-5 md:p-8">
+        <Card>
+          <CardContent className="p-6">
+            <p className="font-medium">Unable to load dashboard</p>
+            <p className="mt-1 text-sm text-muted-foreground">{error}</p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (!dashboard) {
+    return (
+      <main className="mx-auto w-full max-w-[1600px] p-5 md:p-8">
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Loading dashboard...
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  const departmentData = dashboard.employee_by_department.map((department) => ({
+    name: department.department_name,
+    employees: department.employee_count,
+  }));
+  const statusData = [
+    {
+      name: "Active",
+      value: dashboard.employee_status.active,
+      fill: "var(--color-active)",
+    },
+    {
+      name: "Inactive",
+      value: dashboard.employee_status.inactive,
+      fill: "var(--color-inactive)",
+    },
+  ];
+  const activePercentage = dashboard.employee_status.total
+    ? Math.round(
+        (dashboard.active_employees / dashboard.employee_status.total) * 100,
+      )
+    : 0;
+
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -92,14 +138,18 @@ export default function DashboardPage() {
             Workspace / Overview
           </p>
           <h1 className="text-3xl font-semibold tracking-tight">
-            Good morning, John
+            Good morning
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Here&apos;s what&apos;s happening across your organization today.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button nativeButton={false} variant="outline" render={<Link href="/audit-log" />}>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href="/audit-logs" />}
+          >
             <Activity /> View activity
           </Button>
           <Button nativeButton={false} render={<Link href="/employee" />}>
@@ -146,7 +196,6 @@ export default function DashboardPage() {
             </ChartContainer>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>Employee status</CardTitle>
@@ -179,11 +228,11 @@ export default function DashboardPage() {
             <div className="flex justify-center gap-6 text-sm">
               <span className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-[var(--chart-2)]" />
-                Active <strong>116</strong>
+                Active <strong>{dashboard.employee_status.active}</strong>
               </span>
               <span className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-muted-foreground" />
-                Inactive <strong>12</strong>
+                Inactive <strong>{dashboard.employee_status.inactive}</strong>
               </span>
             </div>
           </CardContent>
@@ -207,25 +256,26 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {departmentData.map((department) => (
+            {dashboard.department_overview.map((department) => (
               <div
-                key={department.name}
+                key={department.department_name}
                 className="flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Building2 className="size-4" />
                   </span>
-                  <span className="text-sm font-medium">{department.name}</span>
+                  <span className="text-sm font-medium">
+                    {department.department_name}
+                  </span>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {department.employees} employees
+                  {department.employee_count} employees
                 </span>
               </div>
             ))}
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -238,21 +288,24 @@ export default function DashboardPage() {
               nativeButton={false}
               variant="ghost"
               size="sm"
-              render={<Link href="/audit-log" />}
+              render={<Link href="/audit-logs" />}
             >
               View all <ArrowUpRight />
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentActivities.map(({ text, user, time, icon: Icon }) => (
-              <div key={`${text}-${time}`} className="flex gap-3">
+            {dashboard.recent_activity.map((activity) => (
+              <div key={activity.id} className="flex gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Icon className="size-4" />
+                  <Activity className="size-4" />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{text}</p>
+                  <p className="truncate text-sm font-medium">
+                    {activityLabel(activity.action, activity.entity)}
+                  </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {user} · {time}
+                    {activity.user_email} ·{" "}
+                    {formatActivityDate(activity.created_at)}
                   </p>
                 </div>
               </div>

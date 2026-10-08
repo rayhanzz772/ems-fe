@@ -1,17 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  Building2,
   Eye,
   Pencil,
   Plus,
   Search,
   Trash2,
-  UsersRound,
 } from "lucide-react";
+import { ApiError, api, type ApiResponse } from "@/lib/api";
 import {
   Button,
   Card,
@@ -48,53 +47,54 @@ import {
 } from "@/components/ui/table";
 
 type Department = {
-  id: number;
+  id: string;
   name: string;
   description: string;
   employeeCount: number;
 };
 
-const initialDepartments: Department[] = [
-  {
-    id: 1,
-    name: "Engineering",
-    description: "Builds and maintains the company's products and technology.",
-    employeeCount: 18,
-  },
-  {
-    id: 2,
-    name: "People & Culture",
-    description:
-      "Supports employee experience, talent, and organizational development.",
-    employeeCount: 6,
-  },
-  {
-    id: 3,
-    name: "Marketing",
-    description: "Creates demand and grows the Morrow brand.",
-    employeeCount: 9,
-  },
-  {
-    id: 4,
-    name: "Finance",
-    description: "Manages financial planning, reporting, and operations.",
-    employeeCount: 5,
-  },
-  {
-    id: 5,
-    name: "Operations",
-    description: "Keeps daily business operations running smoothly.",
-    employeeCount: 0,
-  },
-];
+type DepartmentApi = {
+  id: string | number;
+  name: string;
+  description?: string | null;
+  employee_count?: number;
+  employeeCount?: number;
+  _count?: { employees?: number };
+};
+
+type DepartmentListData =
+  | DepartmentApi[]
+  | {
+      items?: DepartmentApi[];
+      results?: DepartmentApi[];
+      departments?: DepartmentApi[];
+      total?: number;
+      total_count?: number;
+    };
+
+function normalizeDepartment(value: DepartmentApi): Department {
+  return {
+    id: String(value.id),
+    name: value.name,
+    description: value.description ?? "",
+    employeeCount:
+      value.employee_count ??
+      value.employeeCount ??
+      value._count?.employees ??
+      0,
+  };
+}
 
 const emptyDepartment = { name: "", description: "" };
 
 export default function DepartmentPage() {
-  const [departments, setDepartments] = useState(initialDepartments);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [query, setQuery] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [selected, setSelected] = useState<Department | null>(null);
   const [editing, setEditing] = useState<Department | null>(null);
   const [form, setForm] = useState(emptyDepartment);
@@ -102,34 +102,56 @@ export default function DepartmentPage() {
   const [deleteError, setDeleteError] = useState("");
   const pageSize = 5;
 
-  const filteredDepartments = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return departments
-      .filter(
-        (department) =>
-          !normalizedQuery ||
-          [department.name, department.description].some((value) =>
-            value.toLowerCase().includes(normalizedQuery),
-          ),
-      )
-      .sort((a, b) =>
-        sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+  const loadDepartments = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(pageSize),
+        sort_by: "name",
+        sort_order: sortAsc ? "ASC" : "DESC",
+      });
+      if (query.trim()) params.set("q", query.trim());
+      const response = await api.get<ApiResponse<DepartmentListData>>(
+        `/departments?${params.toString()}`,
       );
-  }, [departments, query, sortAsc]);
+      const data = response.data;
+      const items = Array.isArray(data)
+        ? data
+        : data.items ?? data.results ?? data.departments ?? [];
+      setDepartments(items.map(normalizeDepartment));
+      setTotal(
+        Array.isArray(data)
+          ? items.length
+          : data.total ?? data.total_count ?? items.length,
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to load departments.",
+      );
+      setDepartments([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, query, sortAsc]);
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredDepartments.length / pageSize),
-  );
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadDepartments(), 250);
+    return () => window.clearTimeout(timer);
+  }, [loadDepartments]);
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const visibleDepartments = filteredDepartments.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  const visibleDepartments = departments;
 
   function openCreate() {
     setEditing(null);
-    setForm(emptyDepartment);
+    setForm({ ...emptyDepartment });
+    setDeleteError("");
     setFormOpen(true);
   }
 
@@ -139,39 +161,60 @@ export default function DepartmentPage() {
     setFormOpen(true);
   }
 
-  function saveDepartment(event: React.FormEvent<HTMLFormElement>) {
+  async function openDetail(department: Department) {
+    setDeleteError("");
+    try {
+      const response = await api.get<ApiResponse<DepartmentApi>>(
+        `/departments/${department.id}/detail`,
+      );
+      setSelected(normalizeDepartment(response.data));
+    } catch (requestError) {
+      setSelected(department);
+      setDeleteError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to load department details.",
+      );
+    }
+  }
+
+  async function saveDepartment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setDeleteError("");
     const values = {
       name: form.name.trim(),
       description: form.description.trim(),
     };
-    if (editing) {
-      setDepartments((items) =>
-        items.map((item) =>
-          item.id === editing.id ? { ...item, ...values } : item,
-        ),
+    try {
+      if (editing) {
+        await api.put(`/departments/${editing.id}/update`, values);
+      } else {
+        await api.post("/departments/create", values);
+      }
+      setFormOpen(false);
+      await loadDepartments();
+    } catch (requestError) {
+      setDeleteError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to save department.",
       );
-    } else {
-      setDepartments((items) => [
-        ...items,
-        { ...values, id: Date.now(), employeeCount: 0 },
-      ]);
     }
-    setFormOpen(false);
   }
 
-  function deleteDepartment(department: Department) {
+  async function deleteDepartment(department: Department) {
     setDeleteError("");
-    if (department.employeeCount > 0) {
+    try {
+      await api.delete(`/departments/${department.id}/delete`);
+      setSelected(null);
+      await loadDepartments();
+    } catch (requestError) {
       setDeleteError(
-        "Department cannot be deleted because it is still assigned to employees.",
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to delete department.",
       );
-      return;
     }
-    setDepartments((items) =>
-      items.filter((item) => item.id !== department.id),
-    );
-    setSelected(null);
   }
 
   return (
@@ -216,13 +259,21 @@ export default function DepartmentPage() {
               variant="outline"
               size="icon"
               title="Toggle sort by name"
-              onClick={() => setSortAsc((value) => !value)}
+              onClick={() => {
+                setSortAsc((value) => !value);
+                setPage(1);
+              }}
             >
               {sortAsc ? <ArrowDown /> : <ArrowUp />}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {error && (
+            <p className="mx-4 mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="overflow-x-auto px-4">
             <Table className="min-w-[760px] overflow-hidden rounded-lg border">
               <TableHeader>
@@ -234,13 +285,20 @@ export default function DepartmentPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                      Loading departments...
+                    </TableCell>
+                  </TableRow>
+                )}
                 {visibleDepartments.map((department) => (
                   <TableRow key={department.id}>
                     <TableCell>
                       <button
                         type="button"
                         className="flex items-center gap-3 text-left"
-                        onClick={() => setSelected(department)}
+                        onClick={() => void openDetail(department)}
                       >
                         <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                           {department.name.slice(0, 2).toUpperCase()}
@@ -260,7 +318,7 @@ export default function DepartmentPage() {
                           variant="ghost"
                           size="icon-sm"
                           title="View details"
-                          onClick={() => setSelected(department)}
+                          onClick={() => void openDetail(department)}
                         >
                           <Eye />
                         </Button>
@@ -276,7 +334,7 @@ export default function DepartmentPage() {
                           variant="ghost"
                           size="icon-sm"
                           title="Delete department"
-                          onClick={() => deleteDepartment(department)}
+                          onClick={() => void deleteDepartment(department)}
                         >
                           <Trash2 />
                         </Button>
@@ -300,11 +358,11 @@ export default function DepartmentPage() {
           <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               Showing{" "}
-              {filteredDepartments.length
+              {total
                 ? (currentPage - 1) * pageSize + 1
                 : 0}
-              -{Math.min(currentPage * pageSize, filteredDepartments.length)} of{" "}
-              {filteredDepartments.length} departments
+              -{Math.min((currentPage - 1) * pageSize + departments.length, total)} of{" "}
+              {total} departments
             </p>
             <Pagination className="mx-0 w-auto justify-end">
               <PaginationContent>
@@ -396,7 +454,7 @@ export default function DepartmentPage() {
               <DialogFooter>
                 <Button
                   variant="destructive"
-                  onClick={() => deleteDepartment(selected)}
+                  onClick={() => void deleteDepartment(selected)}
                 >
                   <Trash2 /> Delete
                 </Button>
@@ -428,6 +486,11 @@ export default function DepartmentPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveDepartment} className="space-y-4">
+            {deleteError && (
+              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {deleteError}
+              </p>
+            )}
             <div className="space-y-2">
               <Label htmlFor="department-name">Name</Label>
               <Input

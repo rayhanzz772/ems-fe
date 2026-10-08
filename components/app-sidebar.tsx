@@ -31,7 +31,7 @@ export function AppSidebar() {
     pathname === "/user" ||
     pathname === "/department" ||
     pathname === "/employee" ||
-    pathname === "/audit-log";
+    pathname === "/audit-log" || pathname === "/audit-logs";
 
   if (!isWorkspaceRoute) return null;
 
@@ -96,8 +96,8 @@ export function AppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link href="/audit-log" />}
-                isActive={pathname === "/audit-log"}
+                render={<Link href="/audit-logs" />}
+                isActive={pathname === "/audit-log" || pathname === "/audit-logs"}
               >
                 <ClipboardMinus aria-hidden="true" />
                 <span>Audit Log</span>
@@ -105,8 +105,8 @@ export function AppSidebar() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<Link href="/audit-log" />}
-                isActive={pathname === "/audit-log"}
+                render={<Link href="/audit-logs" />}
+                isActive={false}
               >
                 <FileCodeCorner aria-hidden="true" />
                 <span>API Docs</span>

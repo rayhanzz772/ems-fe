@@ -13,8 +13,9 @@ export class ApiError extends Error {
 }
 
 function getAccessToken() {
-  if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("access_token");
+  return typeof window === "undefined"
+    ? null
+    : window.localStorage.getItem("access_token");
 }
 
 export async function apiRequest<T>(
@@ -22,9 +23,7 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   if (!API_URL) {
-    throw new Error(
-      "NEXT_PUBLIC_API_URL is not configured. Add it to .env.local and restart the dev server.",
-    );
+    throw new Error("NEXT_PUBLIC_API_URL is not configured.");
   }
 
   const headers = new Headers(options.headers);
@@ -33,9 +32,9 @@ export async function apiRequest<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const accessToken = getAccessToken();
-  if (accessToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
+  const token = getAccessToken();
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -80,7 +79,7 @@ export type AuthUser = {
   status?: boolean;
 };
 
-type ApiResponse<T> = {
+export type ApiResponse<T> = {
   success: boolean;
   message: string;
   metadata: Record<string, unknown>;
@@ -92,16 +91,14 @@ export async function login(email: string, password: string) {
     email,
     password,
   });
-  const responseData = response.data as AuthUser & {
+  const data = response.data as AuthUser & {
     token?: string;
     access_token?: string;
   };
-  const token = responseData.token ?? responseData.access_token;
-
+  const token = data.token ?? data.access_token;
   if (token && typeof window !== "undefined") {
     window.localStorage.setItem("access_token", token);
   }
-
   return response.data;
 }
 
@@ -118,4 +115,33 @@ export async function logout() {
       window.localStorage.removeItem("access_token");
     }
   }
+}
+
+export type DashboardData = {
+  total_employees: number;
+  active_employees: number;
+  inactive_employees: number;
+  employee_status: { active: number; inactive: number; total: number };
+  employee_by_department: Array<{
+    department_id: string;
+    department_name: string;
+    employee_count: number;
+  }>;
+  department_overview: Array<{
+    department_name: string;
+    employee_count: number;
+  }>;
+  recent_activity: Array<{
+    id: string;
+    action: string;
+    entity: string;
+    entity_id: string;
+    user_email: string;
+    created_at: string;
+  }>;
+};
+
+export async function getDashboard() {
+  const response = await api.get<ApiResponse<DashboardData>>("/dashboard");
+  return response.data;
 }

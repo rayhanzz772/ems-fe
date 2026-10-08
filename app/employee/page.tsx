@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
+import { ApiError, api, type ApiResponse } from "@/lib/api";
 import {
   Button,
   Card,
@@ -48,7 +49,7 @@ import {
 } from "@/components/ui/table";
 
 type Employee = {
-  id: number;
+  id: string;
   employee_code: string;
   first_name: string;
   last_name: string;
@@ -64,7 +65,6 @@ type Employee = {
 
 type EmployeeForm = Omit<Employee, "id" | "employee_code" | "department">;
 
-const departments = ["Engineering", "People & Culture", "Marketing", "Finance"];
 const positions = [
   "Product Designer",
   "Frontend Engineer",
@@ -73,92 +73,31 @@ const positions = [
   "Product Manager",
 ];
 
-const initialEmployees: Employee[] = [
-  {
-    id: 1,
-    employee_code: "EMP-001",
-    first_name: "Alya",
-    last_name: "Pratama",
-    email: "alya.pratama@morrow.co",
-    phone_number: "+62 812-3456-7890",
-    department_id: "engineering",
-    department: "Engineering",
-    position: "Frontend Engineer",
-    hire_date: "2024-01-15",
-    address: "Jakarta Selatan",
-    status: true,
-  },
-  {
-    id: 2,
-    employee_code: "EMP-002",
-    first_name: "Raka",
-    last_name: "Wijaya",
-    email: "raka.wijaya@morrow.co",
-    phone_number: "+62 813-2234-5678",
-    department_id: "people",
-    department: "People & Culture",
-    position: "HR Specialist",
-    hire_date: "2023-08-21",
-    address: "Tangerang",
-    status: true,
-  },
-  {
-    id: 3,
-    employee_code: "EMP-003",
-    first_name: "Nadia",
-    last_name: "Sari",
-    email: "nadia.sari@morrow.co",
-    phone_number: "+62 811-9087-1122",
-    department_id: "marketing",
-    department: "Marketing",
-    position: "Product Manager",
-    hire_date: "2022-11-07",
-    address: "Bandung",
-    status: true,
-  },
-  {
-    id: 4,
-    employee_code: "EMP-004",
-    first_name: "Bagas",
-    last_name: "Hidayat",
-    email: "bagas.hidayat@morrow.co",
-    phone_number: "+62 852-1122-3344",
-    department_id: "finance",
-    department: "Finance",
-    position: "Finance Analyst",
-    hire_date: "2021-04-12",
-    address: "Jakarta Timur",
-    status: false,
-  },
-  {
-    id: 5,
-    employee_code: "EMP-005",
-    first_name: "Sinta",
-    last_name: "Lestari",
-    email: "sinta.lestari@morrow.co",
-    phone_number: "+62 822-4455-6677",
-    department_id: "engineering",
-    department: "Engineering",
-    position: "Product Designer",
-    hire_date: "2024-03-04",
-    address: "Depok",
-    status: true,
-  },
-  {
-    id: 6,
-    employee_code: "EMP-006",
-    first_name: "Dimas",
-    last_name: "Kurniawan",
-    email: "dimas.kurniawan@morrow.co",
-    phone_number: "+62 878-3344-5566",
-    department_id: "engineering",
-    department: "Engineering",
-    position: "Frontend Engineer",
-    hire_date: "2023-06-19",
-    address: "Bekasi",
-    status: true,
-  },
-];
+type EmployeeApi = Omit<Employee, "id" | "department"> & {
+  id: string | number;
+  department?: string;
+  department_name?: string;
+};
+
+type EmployeeListData =
+  | EmployeeApi[]
+  | {
+      items?: EmployeeApi[];
+      results?: EmployeeApi[];
+      employees?: EmployeeApi[];
+      total?: number;
+      total_count?: number;
+    };
+
+function normalizeEmployee(value: EmployeeApi): Employee {
+  return {
+    ...value,
+    id: String(value.id),
+    phone_number: value.phone_number ?? "",
+    address: value.address ?? "",
+    department: value.department ?? value.department_name ?? "",
+  };
+}
 
 const emptyForm: EmployeeForm = {
   first_name: "",
@@ -177,11 +116,19 @@ function fullName(employee: Employee) {
 }
 
 function formatDate(date: string) {
+  if (!date) return "—";
+
+  const parsedDate = new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T00:00:00` : date,
+  );
+
+  if (Number.isNaN(parsedDate.getTime())) return "—";
+
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(`${date}T00:00:00`));
+  }).format(parsedDate);
 }
 
 function StatusBadge({ active }: { active: boolean }) {
@@ -214,135 +161,201 @@ function StatusToggle({
 }
 
 export default function EmployeePage() {
-  const [employees, setEmployees] = useState(initialEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("first_name");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [hireDateFrom, setHireDateFrom] = useState("");
+  const [hireDateTo, setHireDateTo] = useState("");
   const [selected, setSelected] = useState<Employee | null>(null);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
   const pageSize = 5;
 
-  const filteredEmployees = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return employees
-      .filter((employee) => {
-        const matchesQuery =
-          !normalizedQuery ||
-          [
-            fullName(employee),
-            employee.email,
-            employee.employee_code,
-            employee.position,
-          ].some((value) => value.toLowerCase().includes(normalizedQuery));
-        const matchesStatus =
-          statusFilter === "all" ||
-          (statusFilter === "active" ? employee.status : !employee.status);
-        const matchesDepartment =
-          departmentFilter === "all" ||
-          employee.department_id === departmentFilter;
-        return matchesQuery && matchesStatus && matchesDepartment;
-      })
-      .sort((a, b) =>
-        sortAsc
-          ? fullName(a).localeCompare(fullName(b))
-          : fullName(b).localeCompare(fullName(a)),
+  const loadEmployees = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(pageSize),
+        sort_by: sortBy,
+        sort_order: sortAsc ? "ASC" : "DESC",
+      });
+      if (query.trim()) params.set("q", query.trim());
+      if (statusFilter !== "all")
+        params.set("status", String(statusFilter === "active"));
+      if (departmentFilter !== "all")
+        params.set("department_id", departmentFilter);
+      if (hireDateFrom) params.set("hire_date_from", hireDateFrom);
+      if (hireDateTo) params.set("hire_date_to", hireDateTo);
+      const response = await api.get<ApiResponse<EmployeeListData>>(
+        `/employees?${params}`,
       );
-  }, [departmentFilter, employees, query, sortAsc, statusFilter]);
+      const data = response.data;
+      const items = Array.isArray(data)
+        ? data
+        : (data.items ?? data.results ?? data.employees ?? []);
+      setEmployees(items.map(normalizeEmployee));
+      setTotal(
+        Array.isArray(data)
+          ? items.length
+          : (data.total ?? data.total_count ?? items.length),
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to load employees.",
+      );
+      setEmployees([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    departmentFilter,
+    hireDateFrom,
+    hireDateTo,
+    page,
+    query,
+    sortAsc,
+    sortBy,
+    statusFilter,
+  ]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadEmployees(), 250);
+    return () => window.clearTimeout(timer);
+  }, [loadEmployees]);
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const visibleEmployees = filteredEmployees.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+  const visibleEmployees = employees;
+  const departmentOptions = Array.from(
+    new Map(
+      employees.map((employee) => [
+        employee.department_id,
+        employee.department || employee.department_id,
+      ]),
+    ),
   );
   function openCreate() {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm });
+    setActionError("");
     setFormOpen(true);
   }
 
   function openEdit(employee: Employee) {
     setEditing(employee);
-    setForm({ ...employee });
+    setForm({
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      email: employee.email,
+      phone_number: employee.phone_number,
+      department_id: employee.department_id,
+      position: employee.position,
+      hire_date: employee.hire_date,
+      address: employee.address,
+      status: employee.status,
+    });
+    setActionError("");
     setFormOpen(true);
   }
 
-  function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const department =
-      departments.find((item) =>
-        item
-          .toLowerCase()
-          .startsWith(
-            form.department_id === "people" ? "people" : form.department_id,
-          ),
-      ) ?? "Engineering";
-    if (editing) {
-      setEmployees((items) =>
-        items.map((item) =>
-          item.id === editing.id ? { ...item, ...form, department } : item,
-        ),
+  async function openDetail(employee: Employee) {
+    try {
+      const response = await api.get<ApiResponse<EmployeeApi>>(
+        `/employees/${employee.id}/detail`,
       );
-    } else {
-      setEmployees((items) => [
-        ...items,
-        {
-          ...form,
-          department,
-          id: Date.now(),
-          employee_code: `EMP-${String(items.length + 1).padStart(3, "0")}`,
-        },
-      ]);
+      setSelected(normalizeEmployee(response.data));
+    } catch (requestError) {
+      setSelected(employee);
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to load employee details.",
+      );
     }
-    setFormOpen(false);
   }
 
-  function toggleStatus(employee: Employee) {
-    setEmployees((items) =>
-      items.map((item) =>
-        item.id === employee.id ? { ...item, status: !item.status } : item,
-      ),
-    );
+  async function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setActionError("");
+    try {
+      if (editing) {
+        await api.put(`/employees/${editing.id}/update`, form);
+      } else {
+        await api.post("/employees/create", form);
+      }
+      setFormOpen(false);
+      await loadEmployees();
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to save employee.",
+      );
+    }
   }
 
-  function deleteEmployee(employee: Employee) {
-    setEmployees((items) => items.filter((item) => item.id !== employee.id));
-    setSelected(null);
+  async function toggleStatus(employee: Employee) {
+    setActionError("");
+    try {
+      await api.patch(`/employees/${employee.id}/status`, {
+        status: !employee.status,
+      });
+      await loadEmployees();
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to update employee status.",
+      );
+    }
   }
 
-  function exportCsv() {
-    const headers = [
-      "employee_code",
-      "first_name",
-      "last_name",
-      "email",
-      "phone_number",
-      "department",
-      "position",
-      "hire_date",
-      "status",
-    ];
-    const rows = filteredEmployees.map((employee) =>
-      headers
-        .map(
-          (header) =>
-            `"${String(employee[header as keyof Employee] ?? "").replaceAll('"', '""')}"`,
-        )
-        .join(","),
-    );
-    const blob = new Blob([[headers.join(","), ...rows].join("\n")], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "employees.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+  async function deleteEmployee(employee: Employee) {
+    setActionError("");
+    try {
+      await api.delete(`/employees/${employee.id}/delete`);
+      setSelected(null);
+      await loadEmployees();
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to delete employee.",
+      );
+    }
+  }
+
+  async function exportCsv() {
+    try {
+      const csv = await api.get<string>("/employees/export");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "employees.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to export employees.",
+      );
+    }
   }
 
   return (
@@ -412,10 +425,11 @@ export default function EmployeePage() {
                 className="h-9 rounded-md border bg-background px-3 text-sm"
               >
                 <option value="all">All departments</option>
-                <option value="engineering">Engineering</option>
-                <option value="people">People & Culture</option>
-                <option value="marketing">Marketing</option>
-                <option value="finance">Finance</option>
+                {departmentOptions.map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
               </select>
               <Button
                 variant="outline"
@@ -425,13 +439,57 @@ export default function EmployeePage() {
               >
                 {sortAsc ? <ArrowDown /> : <ArrowUp />}
               </Button>
-              <Button variant="outline" size="icon" title="More filters">
-                <SlidersHorizontal />
-              </Button>
+              <select
+                aria-label="Sort employees by"
+                value={sortBy}
+                onChange={(event) => {
+                  setSortBy(event.target.value);
+                  setPage(1);
+                }}
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="first_name">First name</option>
+                <option value="last_name">Last name</option>
+                <option value="employee_code">Employee code</option>
+                <option value="email">Email</option>
+                <option value="department_name">Department</option>
+                <option value="position">Position</option>
+                <option value="status">Status</option>
+                <option value="hire_date">Hire date</option>
+                <option value="created_at">Created date</option>
+                <option value="updated_at">Updated date</option>
+              </select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                type="date"
+                aria-label="Hire date from"
+                value={hireDateFrom}
+                onChange={(event) => {
+                  setHireDateFrom(event.target.value);
+                  setPage(1);
+                }}
+                className="w-auto"
+              />
+              <Input
+                type="date"
+                aria-label="Hire date to"
+                value={hireDateTo}
+                onChange={(event) => {
+                  setHireDateTo(event.target.value);
+                  setPage(1);
+                }}
+                className="w-auto"
+              />
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {(error || actionError) && (
+            <p className="mx-4 mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error || actionError}
+            </p>
+          )}
           <div className="overflow-x-auto px-4">
             <Table className="min-w-[920px] overflow-hidden rounded-lg border">
               <TableHeader>
@@ -445,13 +503,23 @@ export default function EmployeePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-32 text-center text-muted-foreground"
+                    >
+                      Loading employees...
+                    </TableCell>
+                  </TableRow>
+                )}
                 {visibleEmployees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell>
                       <button
                         type="button"
                         className="flex items-center gap-3 text-left"
-                        onClick={() => setSelected(employee)}
+                        onClick={() => void openDetail(employee)}
                       >
                         <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                           {employee.first_name[0]}
@@ -477,7 +545,7 @@ export default function EmployeePage() {
                     <TableCell>
                       <StatusToggle
                         active={employee.status}
-                        onClick={() => toggleStatus(employee)}
+                        onClick={() => void toggleStatus(employee)}
                       />
                     </TableCell>
                     <TableCell>
@@ -486,7 +554,7 @@ export default function EmployeePage() {
                           variant="ghost"
                           size="icon-sm"
                           title="View details"
-                          onClick={() => setSelected(employee)}
+                          onClick={() => void openDetail(employee)}
                         >
                           <Eye />
                         </Button>
@@ -517,10 +585,9 @@ export default function EmployeePage() {
           </div>
           <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              {filteredEmployees.length ? (currentPage - 1) * pageSize + 1 : 0}-
-              {Math.min(currentPage * pageSize, filteredEmployees.length)} of{" "}
-              {filteredEmployees.length} employees
+              Showing {total ? (currentPage - 1) * pageSize + 1 : 0}-
+              {Math.min((currentPage - 1) * pageSize + employees.length, total)}{" "}
+              of {total} employees
             </p>
             <Pagination className="mx-0 w-auto justify-end">
               <PaginationContent>
@@ -629,7 +696,7 @@ export default function EmployeePage() {
               <DialogFooter>
                 <Button
                   variant="destructive"
-                  onClick={() => deleteEmployee(selected)}
+                  onClick={() => void deleteEmployee(selected)}
                 >
                   <Trash2 /> Delete
                 </Button>
@@ -717,10 +784,11 @@ export default function EmployeePage() {
                 }
                 className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
-                <option value="engineering">Engineering</option>
-                <option value="people">People & Culture</option>
-                <option value="marketing">Marketing</option>
-                <option value="finance">Finance</option>
+                {departmentOptions.map(([id, name]) => (
+                  <option key={id} value={id}>
+                    {name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">

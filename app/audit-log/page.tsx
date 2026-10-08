@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -9,6 +9,7 @@ import {
   Eye,
   Search,
 } from "lucide-react";
+import { ApiError, api, type ApiResponse } from "@/lib/api";
 import {
   Button,
   Card,
@@ -43,91 +44,47 @@ import {
 type Action = "CREATE" | "UPDATE" | "DELETE";
 type Entity = "Employee" | "User" | "Department";
 type AuditLog = {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   user_email: string;
   action: Action;
   entity: Entity;
-  entity_id: number;
-  old_data: Record<string, string> | null;
-  new_data: Record<string, string> | null;
+  entity_id: string;
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
   created_at: string;
 };
 
-const initialLogs: AuditLog[] = [
-  {
-    id: 1,
-    user_id: 1,
-    user_email: "admin@morrow.co",
-    action: "CREATE",
-    entity: "Employee",
-    entity_id: 7,
-    old_data: null,
-    new_data: { name: "Dimas Kurniawan", position: "Frontend Engineer" },
-    created_at: "2024-06-20T09:24:00",
-  },
-  {
-    id: 2,
-    user_id: 1,
-    user_email: "admin@morrow.co",
-    action: "UPDATE",
-    entity: "Department",
-    entity_id: 1,
-    old_data: { description: "Technology team" },
-    new_data: { description: "Builds and maintains the company's products." },
-    created_at: "2024-06-19T16:42:00",
-  },
-  {
-    id: 3,
-    user_id: 2,
-    user_email: "nadia.hr@morrow.co",
-    action: "UPDATE",
-    entity: "User",
-    entity_id: 4,
-    old_data: { status: "false" },
-    new_data: { status: "true" },
-    created_at: "2024-06-19T13:18:00",
-  },
-  {
-    id: 4,
-    user_id: 1,
-    user_email: "admin@morrow.co",
-    action: "DELETE",
-    entity: "Employee",
-    entity_id: 4,
-    old_data: { name: "Bagas Hidayat" },
-    new_data: null,
-    created_at: "2024-06-18T11:05:00",
-  },
-  {
-    id: 5,
-    user_id: 1,
-    user_email: "admin@morrow.co",
-    action: "CREATE",
-    entity: "Department",
-    entity_id: 5,
-    old_data: null,
-    new_data: { name: "Operations" },
-    created_at: "2024-06-17T10:30:00",
-  },
-  {
-    id: 6,
-    user_id: 2,
-    user_email: "nadia.hr@morrow.co",
-    action: "UPDATE",
-    entity: "Employee",
-    entity_id: 2,
-    old_data: { position: "HR Assistant" },
-    new_data: { position: "HR Specialist" },
-    created_at: "2024-06-16T15:12:00",
-  },
-];
+type AuditLogApi = Omit<AuditLog, "id" | "user_id" | "entity_id"> & {
+  id: string | number;
+  user_id: string | number;
+  entity_id: string | number;
+};
+
+type AuditLogListData = AuditLogApi[] | {
+  items?: AuditLogApi[];
+  results?: AuditLogApi[];
+  audit_logs?: AuditLogApi[];
+  total?: number;
+  total_count?: number;
+};
+
+function normalizeLog(log: AuditLogApi): AuditLog {
+  return {
+    ...log,
+    id: String(log.id),
+    user_id: String(log.user_id),
+    entity_id: String(log.entity_id),
+  };
+}
 
 function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("id-ID", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function ActionBadge({ action }: { action: Action }) {
@@ -146,7 +103,7 @@ function ActionBadge({ action }: { action: Action }) {
 }
 
 export default function AuditLogPage() {
-  const [logs] = useState(initialLogs);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
   const [query, setQuery] = useState("");
   const [action, setAction] = useState("all");
   const [entity, setEntity] = useState("all");
@@ -154,76 +111,86 @@ export default function AuditLogPage() {
   const [dateTo, setDateTo] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [userId, setUserId] = useState("");
+  const [sortBy, setSortBy] = useState("created_at");
   const [selected, setSelected] = useState<AuditLog | null>(null);
   const pageSize = 5;
 
-  const filteredLogs = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return logs
-      .filter((log) => {
-        const matchesQuery =
-          !normalizedQuery ||
-          [log.user_email, log.action, log.entity, String(log.entity_id)].some(
-            (value) => value.toLowerCase().includes(normalizedQuery),
-          );
-        const matchesAction = action === "all" || log.action === action;
-        const matchesEntity = entity === "all" || log.entity === entity;
-        const createdDate = log.created_at.slice(0, 10);
-        const matchesFrom = !dateFrom || createdDate >= dateFrom;
-        const matchesTo = !dateTo || createdDate <= dateTo;
-        return (
-          matchesQuery &&
-          matchesAction &&
-          matchesEntity &&
-          matchesFrom &&
-          matchesTo
-        );
-      })
-      .sort((a, b) =>
-        sortAsc
-          ? a.created_at.localeCompare(b.created_at)
-          : b.created_at.localeCompare(a.created_at),
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(pageSize),
+        sort_by: sortBy,
+        sort_order: sortAsc ? "ASC" : "DESC",
+      });
+      if (query.trim()) params.set("q", query.trim());
+      if (action !== "all") params.set("action", action);
+      if (entity !== "all") params.set("entity", entity);
+      if (userId.trim()) params.set("user_id", userId.trim());
+      if (dateFrom) params.set("date_from", dateFrom);
+      if (dateTo) params.set("date_to", dateTo);
+      const response = await api.get<ApiResponse<AuditLogListData>>(
+        `/audit-logs?${params.toString()}`,
       );
-  }, [action, dateFrom, dateTo, entity, logs, query, sortAsc]);
+      const data = response.data;
+      const items = Array.isArray(data)
+        ? data
+        : data.items ?? data.results ?? data.audit_logs ?? [];
+      setLogs(items.map(normalizeLog));
+      setTotal(
+        Array.isArray(data)
+          ? items.length
+          : data.total ?? data.total_count ?? items.length,
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to load audit logs.",
+      );
+      setLogs([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [action, dateFrom, dateTo, entity, page, query, sortAsc, sortBy, userId]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadLogs(), 250);
+    return () => window.clearTimeout(timer);
+  }, [loadLogs]);
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const visibleLogs = filteredLogs.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  const visibleLogs = logs;
 
   function resetPage() {
     setPage(1);
   }
 
-  function exportCsv() {
-    const headers = [
-      "id",
-      "user_id",
-      "user_email",
-      "action",
-      "entity",
-      "entity_id",
-      "created_at",
-    ];
-    const rows = filteredLogs.map((log) =>
-      headers
-        .map(
-          (header) =>
-            `"${String(log[header as keyof AuditLog] ?? "").replaceAll('"', '""')}"`,
-        )
-        .join(","),
-    );
-    const blob = new Blob([[headers.join(","), ...rows].join("\n")], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "audit-logs.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+  async function exportCsv() {
+    try {
+      const csv = await api.get<string>("/audit-logs/export");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "audit-logs.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to export audit logs.",
+      );
+    }
   }
 
   return (
@@ -290,12 +257,36 @@ export default function AuditLogPage() {
               <option value="User">User</option>
               <option value="Department">Department</option>
             </select>
+            <Input
+              aria-label="Filter by user ID"
+              value={userId}
+              onChange={(event) => {
+                setUserId(event.target.value);
+                resetPage();
+              }}
+              placeholder="User ID"
+            />
             <Button
               variant="outline"
               onClick={() => setSortAsc((value) => !value)}
             >
               {sortAsc ? <ArrowUp /> : <ArrowDown />} Date
             </Button>
+            <select
+              aria-label="Sort audit logs by"
+              value={sortBy}
+              onChange={(event) => {
+                setSortBy(event.target.value);
+                resetPage();
+              }}
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="created_at">Created date</option>
+              <option value="action">Action</option>
+              <option value="entity">Entity</option>
+              <option value="entity_id">Entity ID</option>
+              <option value="user_email">User email</option>
+            </select>
             <Input
               aria-label="Filter from date"
               type="date"
@@ -317,6 +308,11 @@ export default function AuditLogPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {error && (
+            <p className="mx-4 mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="overflow-x-auto px-4">
             <Table className="min-w-[980px] overflow-hidden rounded-lg border">
               <TableHeader>
@@ -329,6 +325,13 @@ export default function AuditLogPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                      Loading audit logs...
+                    </TableCell>
+                  </TableRow>
+                )}
                 {visibleLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell>
@@ -383,9 +386,9 @@ export default function AuditLogPage() {
           <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               Showing{" "}
-              {filteredLogs.length ? (currentPage - 1) * pageSize + 1 : 0}-
-              {Math.min(currentPage * pageSize, filteredLogs.length)} of{" "}
-              {filteredLogs.length} activities
+              {total ? (currentPage - 1) * pageSize + 1 : 0}-
+              {Math.min((currentPage - 1) * pageSize + logs.length, total)} of{" "}
+              {total} activities
             </p>
             <Pagination className="mx-0 w-auto justify-end">
               <PaginationContent>

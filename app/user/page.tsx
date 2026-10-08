@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -8,9 +8,7 @@ import {
   Pencil,
   Plus,
   Search,
-  ShieldCheck,
   Trash2,
-  UsersRound,
 } from "lucide-react";
 import {
   Button,
@@ -46,13 +44,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ApiError, api, getMe, type ApiResponse } from "@/lib/api";
 
 type UserRole = "ADMIN" | "HR" | "EMPLOYEE";
 type User = {
-  id: number;
+  id: string;
   email: string;
   role: UserRole;
   status: boolean;
+  created_at?: string;
 };
 type UserForm = {
   email: string;
@@ -60,15 +60,16 @@ type UserForm = {
   role: UserRole;
   status: boolean;
 };
-
-const initialUsers: User[] = [
-  { id: 1, email: "admin@morrow.co", role: "ADMIN", status: true },
-  { id: 2, email: "nadia.hr@morrow.co", role: "HR", status: true },
-  { id: 3, email: "alya.pratama@morrow.co", role: "EMPLOYEE", status: true },
-  { id: 4, email: "raka.wijaya@morrow.co", role: "EMPLOYEE", status: false },
-  { id: 5, email: "finance@morrow.co", role: "HR", status: true },
-  { id: 6, email: "dimas.kurniawan@morrow.co", role: "EMPLOYEE", status: true },
-];
+type UserListPayload = {
+  items?: User[];
+  results?: User[];
+  users?: User[];
+  total?: number;
+  total_count?: number;
+  page?: number;
+  per_page?: number;
+  last_page?: number;
+};
 
 const emptyForm: UserForm = {
   email: "",
@@ -90,24 +91,20 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
-function StatusToggle({
-  active,
-  onClick,
-}: {
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Switch
-      checked={active}
-      onCheckedChange={onClick}
-      aria-label={`Turn status ${active ? "off" : "on"}`}
-    />
-  );
+function getListData(response: ApiResponse<User[] | UserListPayload>) {
+  const payload = response.data;
+  if (Array.isArray(payload)) {
+    return { users: payload, total: payload.length };
+  }
+  return {
+    users: payload.items ?? payload.results ?? payload.users ?? [],
+    total: payload.total ?? payload.total_count ?? 0,
+  };
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -117,41 +114,81 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [form, setForm] = useState<UserForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
-  const pageSize = 5;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const pageSize = 10;
+  const sortOrder = sortAsc ? "ASC" : "DESC";
 
-  const filteredUsers = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return users
-      .filter((user) => {
-        const matchesQuery =
-          !normalizedQuery ||
-          user.email.toLowerCase().includes(normalizedQuery) ||
-          user.role.toLowerCase().includes(normalizedQuery);
-        const matchesRole = roleFilter === "all" || user.role === roleFilter;
-        const matchesStatus =
-          statusFilter === "all" ||
-          (statusFilter === "active" ? user.status : !user.status);
-        return matchesQuery && matchesRole && matchesStatus;
-      })
-      .sort((a, b) =>
-        sortAsc
-          ? a.email.localeCompare(b.email)
-          : b.email.localeCompare(a.email),
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        per_page: String(pageSize),
+        sort_by: "email",
+        sort_order: sortOrder,
+      });
+      if (query.trim()) params.set("q", query.trim());
+      if (roleFilter !== "all") params.set("role", roleFilter);
+      if (statusFilter !== "all")
+        params.set("status", statusFilter === "active" ? "true" : "false");
+
+      const response = await api.get<ApiResponse<User[] | UserListPayload>>(
+        `/users?${params.toString()}`,
       );
-  }, [query, roleFilter, sortAsc, statusFilter, users]);
+      const result = getListData(response);
+      setUsers(result.users);
+      setTotal(result.total);
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to load users.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [page, query, roleFilter, sortOrder, statusFilter]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadUsers();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadUsers]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void getMe()
+        .then((user) => {
+          setCurrentUserId(user.id);
+          setCurrentUserEmail(user.email.toLowerCase());
+        })
+        .catch(() => {
+          setCurrentUserId(null);
+          setCurrentUserEmail(null);
+        });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const visibleUsers = filteredUsers.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
-  const activeCount = users.filter((user) => user.status).length;
-  const adminCount = users.filter((user) => user.role === "ADMIN").length;
+
+  function resetAndSearch(setter: (value: string) => void, value: string) {
+    setter(value);
+    setPage(1);
+  }
 
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
+    setActionError("");
     setFormOpen(true);
   }
 
@@ -163,49 +200,73 @@ export default function UsersPage() {
       role: user.role,
       status: user.status,
     });
+    setActionError("");
     setFormOpen(true);
   }
 
-  function saveUser(event: React.FormEvent<HTMLFormElement>) {
+  async function saveUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (editing) {
-      setUsers((items) =>
-        items.map((item) =>
-          item.id === editing.id
-            ? {
-                ...item,
-                email: form.email,
-                role: form.role,
-                status: form.status,
-              }
-            : item,
-        ),
+    setActionError("");
+    try {
+      const payload: Record<string, string | boolean> = {
+        email: form.email,
+        role: form.role,
+        status: form.status,
+      };
+      if (form.password) payload.password = form.password;
+      if (editing) {
+        await api.put(`/users/${editing.id}/update`, payload);
+      } else {
+        await api.post("/users/create", payload);
+      }
+      setFormOpen(false);
+      await loadUsers();
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to save user.",
       );
-    } else {
-      setUsers((items) => [
-        ...items,
-        {
-          id: Date.now(),
-          email: form.email,
-          role: form.role,
-          status: form.status,
-        },
-      ]);
     }
-    setFormOpen(false);
   }
 
-  function toggleStatus(user: User) {
-    setUsers((items) =>
-      items.map((item) =>
-        item.id === user.id ? { ...item, status: !item.status } : item,
-      ),
-    );
+  async function toggleStatus(user: User, nextStatus: boolean) {
+    setActionError("");
+    if (
+      user.id === currentUserId ||
+      user.email.toLowerCase() === currentUserEmail
+    ) {
+      setActionError("You cannot change your own account status.");
+      return;
+    }
+
+    try {
+      await api.patch(`/users/${user.id}/status`, { status: nextStatus });
+      await loadUsers();
+      if (selected?.id === user.id)
+        setSelected({ ...user, status: nextStatus });
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to update user status.",
+      );
+    }
   }
 
-  function deleteUser(user: User) {
-    setUsers((items) => items.filter((item) => item.id !== user.id));
-    setSelected(null);
+  async function deleteUser(user: User) {
+    setActionError("");
+    try {
+      await api.delete(`/users/${user.id}/delete`);
+      setSelected(null);
+      await loadUsers();
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to delete user.",
+      );
+    }
   }
 
   return (
@@ -238,11 +299,10 @@ export default function UsersPage() {
               <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
               <Input
                 value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search by email or role..."
+                onChange={(event) =>
+                  resetAndSearch(setQuery, event.target.value)
+                }
+                placeholder="Search by email..."
                 className="pl-9"
               />
             </div>
@@ -250,10 +310,9 @@ export default function UsersPage() {
               <select
                 aria-label="Filter by role"
                 value={roleFilter}
-                onChange={(event) => {
-                  setRoleFilter(event.target.value);
-                  setPage(1);
-                }}
+                onChange={(event) =>
+                  resetAndSearch(setRoleFilter, event.target.value)
+                }
                 className="h-9 rounded-md border bg-background px-3 text-sm"
               >
                 <option value="all">All roles</option>
@@ -264,10 +323,9 @@ export default function UsersPage() {
               <select
                 aria-label="Filter by status"
                 value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value);
-                  setPage(1);
-                }}
+                onChange={(event) =>
+                  resetAndSearch(setStatusFilter, event.target.value)
+                }
                 className="h-9 rounded-md border bg-background px-3 text-sm"
               >
                 <option value="all">All status</option>
@@ -278,7 +336,10 @@ export default function UsersPage() {
                 variant="outline"
                 size="icon"
                 title="Toggle sort by email"
-                onClick={() => setSortAsc((value) => !value)}
+                onClick={() => {
+                  setSortAsc((value) => !value);
+                  setPage(1);
+                }}
               >
                 {sortAsc ? <ArrowDown /> : <ArrowUp />}
               </Button>
@@ -286,6 +347,11 @@ export default function UsersPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {error && (
+            <p className="mx-4 mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="overflow-x-auto px-4">
             <Table className="min-w-[920px] overflow-hidden rounded-lg border">
               <TableHeader>
@@ -297,64 +363,89 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visibleUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <button
-                        type="button"
-                        className="flex items-center gap-3 text-left"
-                        onClick={() => setSelected(user)}
-                      >
-                        <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                          {user.email[0].toUpperCase()}
-                        </span>
-                        <span className="font-medium hover:underline">
-                          {user.email}
-                        </span>
-                      </button>
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium">
-                        {user.role}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <StatusToggle
-                        active={user.status}
-                        onClick={() => toggleStatus(user)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="View details"
-                          onClick={() => setSelected(user)}
-                        >
-                          <Eye />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Edit user"
-                          onClick={() => openEdit(user)}
-                        >
-                          <Pencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Delete user"
-                          onClick={() => deleteUser(user)}
-                        >
-                          <Trash2 />
-                        </Button>
-                      </div>
+                {loading && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="h-32 text-center text-muted-foreground"
+                    >
+                      Loading users...
                     </TableCell>
                   </TableRow>
-                ))}
-                {!visibleUsers.length && (
+                )}
+                {!loading &&
+                  users.map((user) => {
+                    const isCurrentUser =
+                      user.id === currentUserId ||
+                      user.email.toLowerCase() === currentUserEmail;
+
+                    return (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <button
+                          type="button"
+                          className="flex items-center gap-3 text-left"
+                          onClick={() => setSelected(user)}
+                        >
+                          <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                            {user.email[0]?.toUpperCase()}
+                          </span>
+                          <span className="font-medium hover:underline">
+                            {user.email}
+                          </span>
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium">
+                          {user.role}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={user.status}
+                          disabled={isCurrentUser}
+                          onCheckedChange={(checked) =>
+                            void toggleStatus(user, checked)
+                          }
+                          aria-label={
+                            isCurrentUser
+                              ? "Your status cannot be changed"
+                              : `Turn status ${user.status ? "off" : "on"}`
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="View details"
+                            onClick={() => setSelected(user)}
+                          >
+                            <Eye />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Edit user"
+                            onClick={() => openEdit(user)}
+                          >
+                            <Pencil />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Delete user"
+                            onClick={() => void deleteUser(user)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    );
+                  })}
+                {!loading && !users.length && (
                   <TableRow>
                     <TableCell
                       colSpan={4}
@@ -369,10 +460,8 @@ export default function UsersPage() {
           </div>
           <div className="flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              {filteredUsers.length ? (currentPage - 1) * pageSize + 1 : 0}-
-              {Math.min(currentPage * pageSize, filteredUsers.length)} of{" "}
-              {filteredUsers.length} users
+              Showing {total ? (currentPage - 1) * pageSize + 1 : 0}-
+              {Math.min(currentPage * pageSize, total)} of {total} users
             </p>
             <Pagination className="mx-0 w-auto justify-end">
               <PaginationContent>
@@ -426,6 +515,12 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
+      {actionError && (
+        <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+          {actionError}
+        </p>
+      )}
+
       <Dialog
         open={Boolean(selected)}
         onOpenChange={(open) => !open && setSelected(null)}
@@ -441,7 +536,7 @@ export default function UsersPage() {
             <div className="space-y-5">
               <div className="flex items-center gap-3">
                 <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
-                  {selected.email[0].toUpperCase()}
+                  {selected.email[0]?.toUpperCase()}
                 </span>
                 <div>
                   <p className="font-semibold">{selected.email}</p>
@@ -456,7 +551,7 @@ export default function UsersPage() {
               <DialogFooter>
                 <Button
                   variant="destructive"
-                  onClick={() => deleteUser(selected)}
+                  onClick={() => void deleteUser(selected)}
                 >
                   <Trash2 /> Delete
                 </Button>
@@ -546,6 +641,11 @@ export default function UsersPage() {
               />{" "}
               Active account
             </label>
+            {actionError && (
+              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                {actionError}
+              </p>
+            )}
             <DialogFooter>
               <DialogClose render={<Button variant="outline" />}>
                 Cancel

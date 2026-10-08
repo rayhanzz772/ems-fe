@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { logout } from "@/lib/api";
+import { ApiError, getMe, logout } from "@/lib/api";
 
 export function Header() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -15,14 +15,55 @@ export function Header() {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userLoadError, setUserLoadError] = useState<string | null>(null);
 
   const showSidebar =
     pathname === "/dashboard" ||
     pathname === "/user" ||
     pathname === "/department" ||
     pathname === "/employee" ||
-    pathname === "/audit-log";
+    pathname === "/audit-log" || pathname === "/audit-logs";
   const showLogo = pathname === "/login" || pathname === "/register";
+
+  useEffect(() => {
+    if (!showSidebar) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadCurrentUser() {
+      try {
+        const user = await getMe();
+        if (!cancelled) {
+          setUserEmail(user.email);
+          setUserLoadError(null);
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        if (error instanceof ApiError && error.status === 401) {
+          router.replace("/login");
+          return;
+        }
+
+        setUserLoadError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load the current user.",
+        );
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, showSidebar]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -43,6 +84,11 @@ export function Header() {
       router.push("/login");
     }
   };
+
+  const userInitials = userEmail
+    ? userEmail.slice(0, 2).toUpperCase()
+    : "--";
+  const userLabel = userEmail ?? (userLoadError ? "Unavailable" : "Loading...");
 
   return (
     <header className="z-10 h-16 w-full shrink-0 border-b bg-background">
@@ -76,13 +122,13 @@ export function Header() {
                 onClick={() => setMenuOpen((open) => !open)}
                 className="flex items-center gap-2 rounded-full px-2 py-1.5 shadow-none"
                 aria-label="Open user menu"
-                title="Open user menu"
+                title={userLoadError ?? "Open user menu"}
               >
                 <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  JD
+                  {userInitials}
                 </div>
                 <span className="hidden text-sm font-medium text-foreground sm:inline">
-                  John Doe
+                  {userLabel}
                 </span>
                 <ChevronDown
                   aria-hidden="true"

@@ -690,7 +690,9 @@ export default function AuditLogPage() {
               <div className="grid gap-3 text-sm sm:grid-cols-3">
                 <div>
                   <p className="text-muted-foreground">User</p>
-                  <p className="mt-1 font-medium">{selected.user_email}</p>
+                  <p className="mt-1 font-medium shrink-0 truncate">
+                    {selected.user_email}
+                  </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Action</p>

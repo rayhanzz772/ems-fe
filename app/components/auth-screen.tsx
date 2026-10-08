@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Card, Input, Label } from "@/components/ui";
 import { ApiError, login } from "@/lib/api";
+import { showError, showSuccess } from "@/lib/toast";
 
 type AuthScreenProps = {
   mode: "login" | "register";
@@ -30,12 +31,17 @@ export function AuthScreen({ mode }: AuthScreenProps) {
           String(formData.get("email") ?? ""),
           String(formData.get("password") ?? ""),
         );
+        showSuccess("Signed in", "Welcome back to your workspace.");
         router.push("/dashboard");
       } catch (error) {
         setMessage(
           error instanceof ApiError
             ? error.message
             : "Unable to sign in. Please try again.",
+        );
+        showError(
+          "Sign in failed",
+          error instanceof Error ? error.message : undefined,
         );
       } finally {
         setIsSubmitting(false);

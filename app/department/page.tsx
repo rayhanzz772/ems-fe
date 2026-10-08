@@ -33,6 +33,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Switch,
   Textarea,
 } from "@/components/ui";
 import {
@@ -51,12 +52,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { showError, showSuccess } from "@/lib/toast";
 
 type Department = {
   id: string;
   name: string;
   description: string;
   employeeCount: number;
+  status?: boolean;
 };
 
 type DepartmentApi = {
@@ -66,6 +69,7 @@ type DepartmentApi = {
   employee_count?: number;
   employeeCount?: number;
   _count?: { employees?: number };
+  status: boolean;
 };
 
 type DepartmentListData =
@@ -76,6 +80,7 @@ type DepartmentListData =
       departments?: DepartmentApi[];
       total?: number;
       total_count?: number;
+      status: boolean;
     };
 
 function normalizeDepartment(value: DepartmentApi): Department {
@@ -88,6 +93,7 @@ function normalizeDepartment(value: DepartmentApi): Department {
       value.employeeCount ??
       value._count?.employees ??
       0,
+    status: value.status ?? true,
   };
 }
 
@@ -213,12 +219,17 @@ export default function DepartmentPage() {
         await api.post("/departments/create", values);
       }
       setFormOpen(false);
+      showSuccess(editing ? "Department updated" : "Department created");
       await loadDepartments();
     } catch (requestError) {
       setDeleteError(
         requestError instanceof ApiError
           ? requestError.message
           : "Unable to save department.",
+      );
+      showError(
+        "Unable to save department",
+        requestError instanceof Error ? requestError.message : undefined,
       );
     }
   }
@@ -228,6 +239,7 @@ export default function DepartmentPage() {
     try {
       await api.delete(`/departments/${department.id}/delete`);
       setSelected(null);
+      showSuccess("Department deleted");
       await loadDepartments();
     } catch (requestError) {
       setDeleteError(
@@ -235,6 +247,33 @@ export default function DepartmentPage() {
           ? requestError.message
           : "Unable to delete department.",
       );
+      showError(
+        "Unable to delete department",
+        requestError instanceof Error ? requestError.message : undefined,
+      );
+    }
+
+  }
+
+  async function toggleStatus(department: Department) {
+    if (currentUserRole !== "ADMIN") return;
+    setDeleteError("");
+    try {
+      await api.patch(`/departments/${department.id}/status`, {
+        status: !department.status,
+      });
+      showSuccess("Department status updated");
+      await loadDepartments();
+      if (selected?.id === department.id) {
+        setSelected({ ...selected, status: !department.status });
+      }
+    } catch (requestError) {
+      const message =
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to update department status.";
+      setDeleteError(message);
+      showError("Unable to update department status", message);
     }
   }
 
@@ -301,6 +340,7 @@ export default function DepartmentPage() {
                   <TableHead>Department</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Employees</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="w-32 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -308,7 +348,7 @@ export default function DepartmentPage() {
                 {loading && (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="h-32 text-center text-muted-foreground"
                     >
                       Loading departments...
@@ -335,6 +375,14 @@ export default function DepartmentPage() {
                       {department.description || "—"}
                     </TableCell>
                     <TableCell>{department.employeeCount}</TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={department.status}
+                        disabled={currentUserRole !== "ADMIN"}
+                        onCheckedChange={() => void toggleStatus(department)}
+                        aria-label={`Turn department status ${department.status ? "off" : "on"}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button
@@ -368,7 +416,7 @@ export default function DepartmentPage() {
                 {!visibleDepartments.length && (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="h-32 text-center text-muted-foreground"
                     >
                       No departments found. Try changing your search.

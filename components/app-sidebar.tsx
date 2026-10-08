@@ -99,7 +99,9 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link href="/audit-logs" />}
-                isActive={pathname === "/audit-log" || pathname === "/audit-logs"}
+                isActive={
+                  pathname === "/audit-log" || pathname === "/audit-logs"
+                }
               >
                 <ClipboardMinus aria-hidden="true" />
                 <span>Audit Log</span>

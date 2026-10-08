@@ -18,6 +18,7 @@ import {
   Input,
   Textarea,
 } from "@/components/ui";
+import { showError, showSuccess } from "@/lib/toast";
 
 type Schema = {
   type?: string;
@@ -241,8 +242,23 @@ function RequestTester({
       setResponsePreview(
         `${response.status} ${response.statusText} · ${Math.round(performance.now() - started)} ms\n\n${formatted}`,
       );
+      if (response.ok) {
+        showSuccess(
+          "Request completed",
+          `${response.status} ${response.statusText}`,
+        );
+      } else {
+        showError(
+          "Request failed",
+          `${response.status} ${response.statusText}`,
+        );
+      }
     } catch (error) {
       setRequestError(
+        error instanceof Error ? error.message : "Unable to send request.",
+      );
+      showError(
+        "Request failed",
         error instanceof Error ? error.message : "Unable to send request.",
       );
     } finally {
@@ -459,16 +475,6 @@ export default function ApiDocsPage() {
       {doc && (
         <Card>
           <CardHeader className="gap-4 border-b">
-            <div className="flex items-center gap-2">
-              <Code2 className="size-5 text-primary" />
-              <div>
-                <CardTitle>Endpoints</CardTitle>
-                <CardDescription>
-                  {operations.length} endpoints
-                  {doc.servers?.[0]?.url ? ` · ${doc.servers[0].url}` : ""}
-                </CardDescription>
-              </div>
-            </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />

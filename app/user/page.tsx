@@ -44,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { showError, showSuccess } from "@/lib/toast";
 import {
   ApiError,
   api,
@@ -240,12 +241,17 @@ export default function UsersPage() {
         await api.post("/users/create", payload);
       }
       setFormOpen(false);
+      showSuccess(editing ? "User updated" : "User created");
       await loadUsers();
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
           ? requestError.message
           : "Unable to save user.",
+      );
+      showError(
+        "Unable to save user",
+        requestError instanceof Error ? requestError.message : undefined,
       );
     }
   }
@@ -263,6 +269,7 @@ export default function UsersPage() {
     try {
       await api.patch(`/users/${user.id}/status`, { status: nextStatus });
       await loadUsers();
+      showSuccess("User status updated");
       if (selected?.id === user.id)
         setSelected({ ...user, status: nextStatus });
     } catch (requestError) {
@@ -270,6 +277,10 @@ export default function UsersPage() {
         requestError instanceof ApiError
           ? requestError.message
           : "Unable to update user status.",
+      );
+      showError(
+        "Unable to update user status",
+        requestError instanceof Error ? requestError.message : undefined,
       );
     }
   }
@@ -280,11 +291,16 @@ export default function UsersPage() {
       await api.delete(`/users/${user.id}/delete`);
       setSelected(null);
       await loadUsers();
+      showSuccess("User deleted");
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
           ? requestError.message
           : "Unable to delete user.",
+      );
+      showError(
+        "Unable to delete user",
+        requestError instanceof Error ? requestError.message : undefined,
       );
     }
   }
@@ -533,12 +549,6 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {actionError && (
-        <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-          {actionError}
-        </p>
-      )}
-
       <Dialog
         open={Boolean(selected)}
         onOpenChange={(open) => !open && setSelected(null)}
@@ -658,11 +668,6 @@ export default function UsersPage() {
               />{" "}
               Active account
             </label>
-            {actionError && (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {actionError}
-              </p>
-            )}
             <DialogFooter>
               <DialogClose render={<Button variant="outline" />}>
                 Cancel

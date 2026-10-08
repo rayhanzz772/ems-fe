@@ -9,6 +9,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ApiError, getMe, logout } from "@/lib/api";
+import { showError, showSuccess } from "@/lib/toast";
 
 export function Header() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -83,6 +84,12 @@ export function Header() {
     setMenuOpen(false);
     try {
       await logout();
+      showSuccess("Signed out");
+    } catch (error) {
+      showError(
+        "Sign out failed",
+        error instanceof Error ? error.message : undefined,
+      );
     } finally {
       router.push("/login");
     }

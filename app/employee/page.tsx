@@ -52,6 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { showError, showSuccess } from "@/lib/toast";
 
 type Employee = {
   id: string;
@@ -345,12 +346,17 @@ export default function EmployeePage() {
         await api.post("/employees/create", form);
       }
       setFormOpen(false);
+      showSuccess(editing ? "Employee updated" : "Employee created");
       await loadEmployees();
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
           ? requestError.message
           : "Unable to save employee.",
+      );
+      showError(
+        "Unable to save employee",
+        requestError instanceof Error ? requestError.message : undefined,
       );
     }
   }
@@ -362,11 +368,16 @@ export default function EmployeePage() {
         status: !employee.status,
       });
       await loadEmployees();
+      showSuccess("Employee status updated");
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
           ? requestError.message
           : "Unable to update employee status.",
+      );
+      showError(
+        "Unable to update employee status",
+        requestError instanceof Error ? requestError.message : undefined,
       );
     }
   }
@@ -376,12 +387,17 @@ export default function EmployeePage() {
     try {
       await api.delete(`/employees/${employee.id}/delete`);
       setSelected(null);
+      showSuccess("Employee deleted");
       await loadEmployees();
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
           ? requestError.message
           : "Unable to delete employee.",
+      );
+      showError(
+        "Unable to delete employee",
+        requestError instanceof Error ? requestError.message : undefined,
       );
     }
   }
@@ -396,6 +412,7 @@ export default function EmployeePage() {
       link.download = "employees.csv";
       link.click();
       URL.revokeObjectURL(url);
+      showSuccess("Employee export downloaded");
     } catch (requestError) {
       setActionError(
         requestError instanceof ApiError
@@ -531,11 +548,6 @@ export default function EmployeePage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {(error || actionError) && (
-            <p className="mx-4 mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error || actionError}
-            </p>
-          )}
           <div className="overflow-x-auto px-4">
             <Table className="min-w-[920px] overflow-hidden rounded-lg border">
               <TableHeader>

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Card, Input, Label } from "@/components/ui";
-import { ApiError, login } from "@/lib/api";
+import { ApiError, getMe, login } from "@/lib/api";
 import { showError, showSuccess } from "@/lib/toast";
 
 type AuthScreenProps = {
@@ -18,6 +18,29 @@ export function AuthScreen({ mode }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isRegister) return;
+
+    const accessToken = window.localStorage.getItem("access_token");
+    if (!accessToken) return;
+
+    let cancelled = false;
+
+    void getMe()
+      .then(() => {
+        if (!cancelled) router.replace("/dashboard");
+      })
+      .catch(() => {
+        if (!cancelled) {
+          window.localStorage.removeItem("access_token");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isRegister, router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -2,12 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Activity,
-  ArrowUpRight,
-  Building2,
-  Plus,
-} from "lucide-react";
+import { Activity, ArrowUpRight, Building2, Plus } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -189,7 +184,7 @@ export default function DashboardPage() {
           <Button
             className="w-full sm:w-auto"
             nativeButton={false}
-            render={<Link href="/employee" />}
+            render={<Link href="/employees" />}
           >
             <Plus /> Add employee
           </Button>
@@ -225,10 +220,7 @@ export default function DashboardPage() {
                   cursor={false}
                   content={<ChartTooltipContent indicator="line" />}
                 />
-                <Bar
-                  dataKey="employees"
-                  radius={[5, 5, 0, 0]}
-                >
+                <Bar dataKey="employees" radius={[5, 5, 0, 0]}>
                   {departmentData.map((entry) => (
                     <Cell key={entry.name} fill={entry.fill} />
                   ))}

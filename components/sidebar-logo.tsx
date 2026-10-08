@@ -37,12 +37,6 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
           className="hidden size-6 object-contain dark:block"
         />
       </div>
-
-      <div className="relative h-6 w-6 flex">
-        <p className="text-lg font-bold text-slate-900 dark:text-slate-50">
-          Morrow
-        </p>
-      </div>
     </Link>
   );
 }

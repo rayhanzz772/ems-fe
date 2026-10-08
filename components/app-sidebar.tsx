@@ -143,9 +143,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarSeparator />
-        <p className="px-2 py-1 text-xs text-muted-foreground">
-          Morrow workspace
-        </p>
+        <p className="px-2 py-1 text-xs text-muted-foreground">Morrow EMS</p>
       </SidebarFooter>
     </Sidebar>
   );

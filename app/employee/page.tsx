@@ -35,7 +35,7 @@ import {
   Input,
   Label,
   Switch,
-  Spinner,
+  Skeleton,
 } from "@/components/ui";
 import {
   Pagination,
@@ -568,7 +568,17 @@ export default function EmployeePage() {
                       colSpan={6}
                       className="h-32 text-center text-muted-foreground"
                     >
-                      <span className="inline-flex items-center gap-2"><Spinner /> Loading employees...</span>
+                      <div className="space-y-3">
+                        {Array.from({ length: 4 }, (_, index) => (
+                          <div key={index} className="flex items-center gap-3">
+                            <Skeleton className="size-9 rounded-full" />
+                            <div className="space-y-2">
+                              <Skeleton className="h-4 w-48" />
+                              <Skeleton className="h-3 w-32" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}

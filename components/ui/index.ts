@@ -33,3 +33,4 @@ export { Label } from "./label";
 export { Textarea } from "./textarea";
 export { Switch } from "./switch";
 export { Spinner } from "./spinner";
+export { Skeleton } from "./skeleton";

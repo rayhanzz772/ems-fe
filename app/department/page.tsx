@@ -34,7 +34,7 @@ import {
   Input,
   Label,
   Switch,
-  Spinner,
+  Skeleton,
   Textarea,
 } from "@/components/ui";
 import {
@@ -352,7 +352,14 @@ export default function DepartmentPage() {
                       colSpan={5}
                       className="h-32 text-center text-muted-foreground"
                     >
-                      <span className="inline-flex items-center gap-2"><Spinner /> Loading departments...</span>
+                      <div className="space-y-3">
+                        {Array.from({ length: 4 }, (_, index) => (
+                          <div key={index} className="flex items-center gap-3">
+                            <Skeleton className="size-9 rounded-full" />
+                            <Skeleton className="h-4 w-56" />
+                          </div>
+                        ))}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}

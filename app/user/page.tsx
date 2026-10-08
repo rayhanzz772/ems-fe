@@ -27,7 +27,7 @@ import {
   Input,
   Label,
   Switch,
-  Spinner,
+  Skeleton,
 } from "@/components/ui";
 import {
   Pagination,
@@ -404,7 +404,14 @@ export default function UsersPage() {
                       colSpan={4}
                       className="h-32 text-center text-muted-foreground"
                     >
-                      <span className="inline-flex items-center gap-2"><Spinner /> Loading users...</span>
+                      <div className="space-y-3">
+                        {Array.from({ length: 4 }, (_, index) => (
+                          <div key={index} className="flex items-center gap-3">
+                            <Skeleton className="size-9 rounded-full" />
+                            <Skeleton className="h-4 w-48" />
+                          </div>
+                        ))}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}

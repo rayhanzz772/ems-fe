@@ -7,6 +7,7 @@ import {
   UsersRound,
   UserGroup,
   IdCardLanyard,
+  ClipboardMinus,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,7 +42,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Manage</SidebarGroupLabel>
+          <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -52,6 +53,12 @@ export function AppSidebar() {
                 <span>Dashboard</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Management</SidebarGroupLabel>
+          <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link href="/user" />}
@@ -77,6 +84,22 @@ export function AppSidebar() {
               >
                 <IdCardLanyard aria-hidden="true" />
                 <span>Employee</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Audit</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                disabled
+                tooltip="Audit log coming soon"
+                className="cursor-not-allowed opacity-60"
+              >
+                <ClipboardMinus aria-hidden="true" />
+                <span>Audit Log</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

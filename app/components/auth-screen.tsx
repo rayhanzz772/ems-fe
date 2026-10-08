@@ -79,8 +79,32 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     <main className="relative isolate flex min-h-[calc(100svh-4rem)] flex-col overflow-hidden bg-background text-foreground">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(var(--muted-foreground)_0.7px,transparent_0.7px)] [background-size:22px_22px] opacity-[0.14]"
-      />
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <svg
+          className="absolute inset-0 h-full w-full stroke-muted-foreground/20 [mask-image:radial-gradient(ellipse_at_center,black_60%,transparent_80%)]"
+          aria-hidden="true"
+        >
+          <defs>
+            <pattern
+              id="subtle-grid-pattern"
+              width="32"
+              height="32"
+              patternUnits="userSpaceOnUse"
+              x="50%"
+              y="-1"
+            >
+              <path d="M.5 32V.5H32" fill="none" />
+            </pattern>
+          </defs>
+          <rect
+            width="100%"
+            height="100%"
+            strokeWidth="0"
+            fill="url(#subtle-grid-pattern)"
+          />
+        </svg>
+      </div>
       <section className="flex w-full flex-1 items-center justify-center px-5 pb-10 pt-4">
         <div className="w-full max-w-[420px]">
           <Card className="px-6 py-7 shadow-sm sm:px-8 sm:py-8">

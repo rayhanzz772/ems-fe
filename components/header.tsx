@@ -19,7 +19,8 @@ export function Header() {
     pathname === "/dashboard" ||
     pathname === "/user" ||
     pathname === "/department" ||
-    pathname === "/employee";
+    pathname === "/employee" ||
+    pathname === "/audit-log";
   const showLogo = pathname === "/login" || pathname === "/register";
 
   useEffect(() => {

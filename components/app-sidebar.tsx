@@ -29,7 +29,8 @@ export function AppSidebar() {
     pathname === "/dashboard" ||
     pathname === "/user" ||
     pathname === "/department" ||
-    pathname === "/employee";
+    pathname === "/employee" ||
+    pathname === "/audit-log";
 
   if (!isWorkspaceRoute) return null;
 
@@ -94,9 +95,8 @@ export function AppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                disabled
-                tooltip="Audit log coming soon"
-                className="cursor-not-allowed opacity-60"
+                render={<Link href="/audit-log" />}
+                isActive={pathname === "/audit-log"}
               >
                 <ClipboardMinus aria-hidden="true" />
                 <span>Audit Log</span>

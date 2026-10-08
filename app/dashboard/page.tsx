@@ -28,6 +28,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Spinner,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -101,7 +102,7 @@ export default function DashboardPage() {
       <main className="mx-auto w-full max-w-[1600px] p-5 md:p-8">
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            Loading dashboard...
+            <span className="inline-flex items-center gap-2"><Spinner /> Loading dashboard...</span>
           </CardContent>
         </Card>
       </main>

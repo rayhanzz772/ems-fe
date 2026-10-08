@@ -4,19 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ChevronDown,
-  Code2,
-  LoaderCircle,
   Search,
   Send,
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
   Input,
   Textarea,
+  Spinner,
 } from "@/components/ui";
 import { showError, showSuccess } from "@/lib/toast";
 
@@ -456,7 +453,7 @@ export default function ApiDocsPage() {
       {loading && (
         <Card>
           <CardContent className="flex items-center gap-3 py-10 text-muted-foreground">
-            <LoaderCircle className="animate-spin" /> Loading OpenAPI
+            <Spinner /> Loading OpenAPI
             specification...
           </CardContent>
         </Card>

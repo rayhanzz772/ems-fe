@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
+  Spinner,
 } from "@/components/ui";
 import {
   Pagination,
@@ -379,7 +380,7 @@ export default function AuditLogPage() {
                       colSpan={5}
                       className="h-32 text-center text-muted-foreground"
                     >
-                      Loading audit logs...
+                      <span className="inline-flex items-center gap-2"><Spinner /> Loading audit logs...</span>
                     </TableCell>
                   </TableRow>
                 )}

@@ -35,6 +35,7 @@ import {
   Input,
   Label,
   Switch,
+  Spinner,
 } from "@/components/ui";
 import {
   Pagination,
@@ -567,7 +568,7 @@ export default function EmployeePage() {
                       colSpan={6}
                       className="h-32 text-center text-muted-foreground"
                     >
-                      Loading employees...
+                      <span className="inline-flex items-center gap-2"><Spinner /> Loading employees...</span>
                     </TableCell>
                   </TableRow>
                 )}

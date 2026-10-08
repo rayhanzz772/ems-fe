@@ -54,7 +54,7 @@ import {
   type ApiResponse,
 } from "@/lib/api";
 
-type UserRole = "ADMIN" | "HR";
+type UserRole = string;
 type User = {
   id: string;
   email: string;
@@ -78,6 +78,9 @@ type UserListPayload = {
   per_page?: number;
   last_page?: number;
 };
+type RoleListData =
+  | Array<{ name: string }>
+  | { items?: Array<{ name: string }>; roles?: Array<{ name: string }> };
 
 const emptyForm: UserForm = {
   email: "",
@@ -85,6 +88,23 @@ const emptyForm: UserForm = {
   role: "HR",
   status: true,
 };
+
+const avatarColors = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+  "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+];
+
+function getAvatarColor(email: string) {
+  const hash = Array.from(email.toLowerCase()).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+  return avatarColors[hash % avatarColors.length];
+}
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
@@ -134,8 +154,49 @@ export default function UsersPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const pageSize = 10;
   const sortOrder = sortAsc ? "ASC" : "DESC";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRoles() {
+      try {
+        const response = await api.get<ApiResponse<RoleListData>>(
+          "/users/get-all-roles",
+        );
+        const roles = Array.isArray(response.data)
+          ? response.data
+          : (response.data.items ?? response.data.roles ?? []);
+        const names = roles.map((role) => role.name.trim()).filter(Boolean);
+        if (!cancelled) {
+          setAvailableRoles(names);
+          setForm((currentForm) => ({
+            ...currentForm,
+            role: currentForm.role || names[0] || "",
+          }));
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          showError(
+            "Unable to load roles",
+            requestError instanceof Error ? requestError.message : undefined,
+          );
+        }
+      } finally {
+        if (!cancelled) setRolesLoading(false);
+      }
+    }
+
+    void loadRoles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -205,7 +266,10 @@ export default function UsersPage() {
   function openCreate() {
     if (currentUserRole !== "ADMIN") return;
     setEditing(null);
-    setForm(emptyForm);
+    setForm({
+      ...emptyForm,
+      role: availableRoles[0] ?? emptyForm.role,
+    });
     setActionError("");
     setFormOpen(true);
   }
@@ -288,9 +352,11 @@ export default function UsersPage() {
 
   async function deleteUser(user: User) {
     setActionError("");
+    setDeleting(true);
     try {
       await api.delete(`/users/${user.id}/delete`);
       setSelected(null);
+      setDeleteTarget(null);
       await loadUsers();
       showSuccess("User deleted");
     } catch (requestError) {
@@ -303,6 +369,8 @@ export default function UsersPage() {
         "Unable to delete user",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -352,8 +420,11 @@ export default function UsersPage() {
                 className="h-9 rounded-md border bg-background px-3 text-sm"
               >
                 <option value="all">All roles</option>
-                <option value="ADMIN">Admin</option>
-                <option value="HR">HR</option>
+                {availableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
               </select>
               <select
                 aria-label="Filter by status"
@@ -429,7 +500,9 @@ export default function UsersPage() {
                             className="flex items-center gap-3 text-left"
                             onClick={() => setSelected(user)}
                           >
-                            <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                            <span
+                              className={`flex size-9 items-center justify-center rounded-full text-sm font-semibold ${getAvatarColor(user.email)}`}
+                            >
                               {user.email[0]?.toUpperCase()}
                             </span>
                             <span className="font-medium hover:underline">
@@ -478,7 +551,7 @@ export default function UsersPage() {
                               variant="ghost"
                               size="icon-sm"
                               title="Delete user"
-                              onClick={() => void deleteUser(user)}
+                              onClick={() => setDeleteTarget(user)}
                             >
                               <Trash2 />
                             </Button>
@@ -571,7 +644,9 @@ export default function UsersPage() {
           {selected && (
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                <span
+                  className={`flex size-12 items-center justify-center rounded-full font-semibold ${getAvatarColor(selected.email)}`}
+                >
                   {selected.email[0]?.toUpperCase()}
                 </span>
                 <div>
@@ -587,7 +662,8 @@ export default function UsersPage() {
               <DialogFooter>
                 <Button
                   variant="destructive"
-                  onClick={() => void deleteUser(selected)}
+                  onClick={() => setDeleteTarget(selected)}
+                  disabled={deleting}
                 >
                   <Trash2 /> Delete
                 </Button>
@@ -603,6 +679,38 @@ export default function UsersPage() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete user?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The account{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.email}
+              </span>{" "}
+              will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" disabled={deleting} />}
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => deleteTarget && void deleteUser(deleteTarget)}
+            >
+              <Trash2 /> {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -657,12 +765,23 @@ export default function UsersPage() {
                 id="user-role"
                 value={form.role}
                 onChange={(event) =>
-                  setForm({ ...form, role: event.target.value as UserRole })
+                  setForm({ ...form, role: event.target.value })
                 }
+                disabled={rolesLoading}
                 className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
-                <option value="ADMIN">Admin</option>
-                <option value="HR">HR</option>
+                {rolesLoading && <option>Loading roles...</option>}
+                {!rolesLoading && !availableRoles.length && (
+                  <option value="">No roles available</option>
+                )}
+                {availableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+                {form.role && !availableRoles.includes(form.role) && (
+                  <option value={form.role}>{form.role}</option>
+                )}
               </select>
             </div>
             <label className="flex items-center gap-2 text-sm">

@@ -12,8 +12,8 @@ import {
   CardContent,
   CardHeader,
   Input,
+  Skeleton,
   Textarea,
-  Spinner,
 } from "@/components/ui";
 import { showError, showSuccess } from "@/lib/toast";
 
@@ -451,12 +451,30 @@ export default function ApiDocsPage() {
         </p>
       </section>
       {loading && (
-        <Card>
-          <CardContent className="flex items-center gap-3 py-10 text-muted-foreground">
-            <Spinner /> Loading OpenAPI
-            specification...
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="space-y-3">
+              <Skeleton className="h-6 w-56" />
+              <Skeleton className="h-4 w-full max-w-2xl" />
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+          {Array.from({ length: 4 }, (_, index) => (
+            <Card key={index}>
+              <CardContent className="space-y-4 py-5">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-16 rounded-md" />
+                  <Skeleton className="h-5 w-64" />
+                </div>
+                <Skeleton className="h-4 w-full max-w-xl" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
       {!loading && error && (
         <Card>

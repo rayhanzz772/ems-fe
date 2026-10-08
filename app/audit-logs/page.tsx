@@ -4,10 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  ClipboardList,
   Download,
   Eye,
+  Pencil,
   Search,
+  SquarePen,
+  Trash,
 } from "lucide-react";
 import { ApiError, api, getPaginationTotal, type ApiResponse } from "@/lib/api";
 import {
@@ -18,8 +20,10 @@ import {
   CardHeader,
   CardTitle,
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Input,
@@ -135,14 +139,25 @@ function formatDate(value: string) {
 
 function ActionBadge({ action }: { action: Action }) {
   const styles = {
-    CREATE: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    UPDATE: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-    DELETE: "bg-destructive/10 text-destructive",
+    CREATE:
+      "border border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+    UPDATE:
+      "border border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300",
+    DELETE:
+      "border border-red-500/30 bg-red-500/15 text-red-700 dark:text-red-300",
   };
+  const icons = {
+    CREATE: Pencil,
+    UPDATE: SquarePen,
+    DELETE: Trash,
+  };
+  const Icon = icons[action];
+
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${styles[action]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${styles[action]}`}
     >
+      <Icon className="size-3.5" />
       {action}
     </span>
   );
@@ -163,6 +178,8 @@ export default function AuditLogPage() {
   const [userId, setUserId] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [selected, setSelected] = useState<AuditLog | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AuditLog | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const pageSize = 5;
 
   const loadLogs = useCallback(async () => {
@@ -242,6 +259,26 @@ export default function AuditLogPage() {
         "Unable to export audit logs",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    }
+  }
+
+  async function deleteLog() {
+    if (!deleteTarget) return;
+
+    setDeleting(true);
+    try {
+      await api.delete(`/audit-logs/${deleteTarget.id}/delete`);
+      showSuccess("Audit log deleted successfully.");
+      setDeleteTarget(null);
+      await loadLogs();
+    } catch (requestError) {
+      showError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to delete audit log.",
+      );
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -370,7 +407,7 @@ export default function AuditLogPage() {
                   <TableHead>Action</TableHead>
                   <TableHead>Entity</TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead className="w-20 text-right">View</TableHead>
+                  <TableHead className="w-28 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -398,8 +435,22 @@ export default function AuditLogPage() {
                   <TableRow key={log.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <ClipboardList className="size-4" />
+                        <span
+                          className={`flex size-9 items-center justify-center rounded-full ${
+                            log.action === "CREATE"
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
+                              : log.action === "UPDATE"
+                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-300"
+                                : "bg-red-500/15 text-red-600 dark:text-red-300"
+                          }`}
+                        >
+                          {log.action === "CREATE" ? (
+                            <Pencil className="size-4" />
+                          ) : log.action === "UPDATE" ? (
+                            <SquarePen className="size-4" />
+                          ) : (
+                            <Trash className="size-4" />
+                          )}
                         </span>
                         <span>
                           <span className="block font-medium">
@@ -427,6 +478,15 @@ export default function AuditLogPage() {
                           onClick={() => setSelected(log)}
                         >
                           <Eye />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title="Delete audit log"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeleteTarget(log)}
+                        >
+                          <Trash />
                         </Button>
                       </div>
                     </TableCell>
@@ -554,6 +614,39 @@ export default function AuditLogPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete audit log?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The selected audit log for{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.entity}
+              </span>{" "}
+              will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" disabled={deleting} />}
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() => void deleteLog()}
+            >
+              <Trash />
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </main>

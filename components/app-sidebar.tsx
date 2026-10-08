@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   UsersRound,
@@ -9,6 +10,7 @@ import {
   IdCardLanyard,
   ClipboardMinus,
   FileCodeCorner,
+  KeyRound,
 } from "lucide-react";
 import {
   Sidebar,
@@ -23,9 +25,11 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { SidebarLogo } from "@/components/sidebar-logo";
+import { getMe } from "@/lib/api";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
   const isWorkspaceRoute =
     pathname === "/dashboard" ||
     pathname === "/user" ||
@@ -34,8 +38,16 @@ export function AppSidebar() {
     pathname === "/audit-log" ||
     pathname === "/audit-logs" ||
     pathname === "/api-docs";
+  const isRoleRoute = pathname === "/roles";
 
-  if (!isWorkspaceRoute) return null;
+  useEffect(() => {
+    if (!isWorkspaceRoute && !isRoleRoute) return;
+    void getMe()
+      .then((user) => setIsAdmin(user.role === "ADMIN"))
+      .catch(() => setIsAdmin(false));
+  }, [isRoleRoute, isWorkspaceRoute]);
+
+  if (!isWorkspaceRoute && !isRoleRoute) return null;
 
   return (
     <Sidebar>
@@ -63,15 +75,28 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Management</SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={<Link href="/user" />}
-                isActive={pathname === "/user"}
-              >
-                <UsersRound aria-hidden="true" />
-                <span>Users</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {isAdmin && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/user" />}
+                  isActive={pathname === "/user"}
+                >
+                  <UsersRound aria-hidden="true" />
+                  <span>Users</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+            {isAdmin && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/roles" />}
+                  isActive={pathname === "/roles"}
+                >
+                  <KeyRound aria-hidden="true" />
+                  <span>Roles</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton
                 render={<Link href="/department" />}

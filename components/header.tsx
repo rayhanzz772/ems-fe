@@ -27,7 +27,8 @@ export function Header() {
     pathname === "/employee" ||
     pathname === "/audit-log" ||
     pathname === "/audit-logs" ||
-    pathname === "/api-docs";
+    pathname === "/api-docs" ||
+    pathname === "/roles";
   const showLogo = pathname === "/login" || pathname === "/register";
 
   useEffect(() => {
@@ -107,6 +108,7 @@ export function Header() {
     "/audit-log": { section: "Other", label: "Audit Log" },
     "/audit-logs": { section: "Other", label: "Audit Log" },
     "/api-docs": { section: "Other", label: "API Docs" },
+    "/roles": { section: "Management", label: "Roles" },
   }[pathname];
 
   return (

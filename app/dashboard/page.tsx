@@ -37,13 +37,22 @@ import {
 import { ApiError, getDashboard, type DashboardData } from "@/lib/api";
 
 const departmentConfig = {
-  employees: { label: "Employees", color: "var(--chart-2)" },
+  employees: { label: "Employees", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 const statusConfig = {
-  active: { label: "Active", color: "var(--chart-2)" },
-  inactive: { label: "Inactive", color: "var(--muted-foreground)" },
+  active: { label: "Active", color: "#22c55e" },
+  inactive: { label: "Inactive", color: "#f97316" },
 } satisfies ChartConfig;
+
+const departmentColors = [
+  "#2563eb",
+  "#7c3aed",
+  "#db2777",
+  "#0891b2",
+  "#16a34a",
+  "#ca8a04",
+];
 
 function formatActivityDate(date: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -156,10 +165,13 @@ export default function DashboardPage() {
     );
   }
 
-  const departmentData = dashboard.employee_by_department.map((department) => ({
-    name: department.department_name,
-    employees: department.employee_count,
-  }));
+  const departmentData = dashboard.employee_by_department.map(
+    (department, index) => ({
+      name: department.department_name,
+      employees: department.employee_count,
+      fill: departmentColors[index % departmentColors.length],
+    }),
+  );
   const statusData = [
     {
       name: "Active",
@@ -234,9 +246,12 @@ export default function DashboardPage() {
                 />
                 <Bar
                   dataKey="employees"
-                  fill="var(--color-employees)"
                   radius={[5, 5, 0, 0]}
-                />
+                >
+                  {departmentData.map((entry) => (
+                    <Cell key={entry.name} fill={entry.fill} />
+                  ))}
+                </Bar>
               </BarChart>
             </ChartContainer>
           </CardContent>
@@ -272,11 +287,11 @@ export default function DashboardPage() {
             </ChartContainer>
             <div className="flex justify-center gap-6 text-sm">
               <span className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-[var(--chart-2)]" />
+                <span className="size-2 rounded-full bg-[#22c55e]" />
                 Active <strong>{dashboard.employee_status.active}</strong>
               </span>
               <span className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-muted-foreground" />
+                <span className="size-2 rounded-full bg-[#f97316]" />
                 Inactive <strong>{dashboard.employee_status.inactive}</strong>
               </span>
             </div>

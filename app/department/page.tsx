@@ -100,6 +100,23 @@ function normalizeDepartment(value: DepartmentApi): Department {
 
 const emptyDepartment = { name: "", description: "" };
 
+const avatarColors = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+  "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+];
+
+function getAvatarColor(name: string) {
+  const hash = Array.from(name.toLowerCase()).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+  return avatarColors[hash % avatarColors.length];
+}
+
 export default function DepartmentPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [query, setQuery] = useState("");
@@ -114,6 +131,8 @@ export default function DepartmentPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const pageSize = 5;
 
   useEffect(() => {
@@ -237,9 +256,11 @@ export default function DepartmentPage() {
 
   async function deleteDepartment(department: Department) {
     setDeleteError("");
+    setDeleting(true);
     try {
       await api.delete(`/departments/${department.id}/delete`);
       setSelected(null);
+      setDeleteTarget(null);
       showSuccess("Department deleted");
       await loadDepartments();
     } catch (requestError) {
@@ -252,8 +273,9 @@ export default function DepartmentPage() {
         "Unable to delete department",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setDeleting(false);
     }
-
   }
 
   async function toggleStatus(department: Department) {
@@ -371,7 +393,9 @@ export default function DepartmentPage() {
                         className="flex items-center gap-3 text-left"
                         onClick={() => void openDetail(department)}
                       >
-                        <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        <span
+                          className={`flex size-9 items-center justify-center rounded-full text-sm font-semibold ${getAvatarColor(department.name)}`}
+                        >
                           {department.name.slice(0, 2).toUpperCase()}
                         </span>
                         <span className="font-medium hover:underline">
@@ -413,7 +437,7 @@ export default function DepartmentPage() {
                           variant="ghost"
                           size="icon-sm"
                           title="Delete department"
-                          onClick={() => void deleteDepartment(department)}
+                          onClick={() => setDeleteTarget(department)}
                         >
                           <Trash2 />
                         </Button>
@@ -509,7 +533,9 @@ export default function DepartmentPage() {
           {selected && (
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                <span
+                  className={`flex size-12 items-center justify-center rounded-full font-semibold ${getAvatarColor(selected.name)}`}
+                >
                   {selected.name.slice(0, 2).toUpperCase()}
                 </span>
                 <div>
@@ -533,7 +559,8 @@ export default function DepartmentPage() {
               <DialogFooter>
                 <Button
                   variant="destructive"
-                  onClick={() => void deleteDepartment(selected)}
+                  onClick={() => setDeleteTarget(selected)}
+                  disabled={deleting}
                 >
                   <Trash2 /> Delete
                 </Button>
@@ -549,6 +576,40 @@ export default function DepartmentPage() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete department?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The department{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.name}
+              </span>{" "}
+              will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" disabled={deleting} />}
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() =>
+                deleteTarget && void deleteDepartment(deleteTarget)
+              }
+            >
+              <Trash2 /> {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

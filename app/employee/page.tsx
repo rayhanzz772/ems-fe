@@ -122,6 +122,23 @@ const emptyForm: EmployeeForm = {
   status: true,
 };
 
+const avatarColors = [
+  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+  "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+  "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+];
+
+function getAvatarColor(email: string) {
+  const hash = Array.from(email.toLowerCase()).reduce(
+    (total, character) => total + character.charCodeAt(0),
+    0,
+  );
+  return avatarColors[hash % avatarColors.length];
+}
+
 function fullName(employee: Employee) {
   return `${employee.first_name} ${employee.last_name}`;
 }
@@ -193,6 +210,8 @@ export default function EmployeePage() {
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const pageSize = 5;
 
   useEffect(() => {
@@ -385,9 +404,11 @@ export default function EmployeePage() {
 
   async function deleteEmployee(employee: Employee) {
     setActionError("");
+    setDeleting(true);
     try {
       await api.delete(`/employees/${employee.id}/delete`);
       setSelected(null);
+      setDeleteTarget(null);
       showSuccess("Employee deleted");
       await loadEmployees();
     } catch (requestError) {
@@ -400,6 +421,8 @@ export default function EmployeePage() {
         "Unable to delete employee",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -590,7 +613,9 @@ export default function EmployeePage() {
                         className="flex items-center gap-3 text-left"
                         onClick={() => void openDetail(employee)}
                       >
-                        <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        <span
+                          className={`flex size-9 items-center justify-center rounded-full text-sm font-semibold ${getAvatarColor(employee.email)}`}
+                        >
                           {employee.first_name[0]}
                           {employee.last_name[0]}
                         </span>
@@ -724,7 +749,9 @@ export default function EmployeePage() {
           {selected && (
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                <span
+                  className={`flex size-12 items-center justify-center rounded-full font-semibold ${getAvatarColor(selected.email)}`}
+                >
                   {selected.first_name[0]}
                   {selected.last_name[0]}
                 </span>
@@ -765,7 +792,8 @@ export default function EmployeePage() {
               <DialogFooter>
                 <Button
                   variant="destructive"
-                  onClick={() => void deleteEmployee(selected)}
+                  onClick={() => setDeleteTarget(selected)}
+                  disabled={deleting}
                 >
                   <Trash2 /> Delete
                 </Button>
@@ -781,6 +809,40 @@ export default function EmployeePage() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete employee?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. The employee{" "}
+              <span className="font-medium text-foreground">
+                {deleteTarget && fullName(deleteTarget)}
+              </span>{" "}
+              will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" disabled={deleting} />}
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={() =>
+                deleteTarget && void deleteEmployee(deleteTarget)
+              }
+            >
+              <Trash2 /> {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

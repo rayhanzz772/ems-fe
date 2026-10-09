@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, ChevronDown, Search, Send } from "lucide-react";
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -340,7 +341,7 @@ function RequestTester({
         type="button"
         onClick={() => void sendRequest()}
         disabled={sending}
-        className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50 cursor-pointer"
       >
         <Send className="size-4" />
         {sending ? "Sending..." : "Send request"}
@@ -374,6 +375,7 @@ export default function ApiDocsPage() {
   const [doc, setDoc] = useState<Document | null>(null);
   const [query, setQuery] = useState("");
   const [methodFilter, setMethodFilter] = useState("all");
+  const [methodMenuOpen, setMethodMenuOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -495,19 +497,43 @@ export default function ApiDocsPage() {
                   className="pl-9"
                 />
               </div>
-              <select
-                aria-label="Filter by HTTP method"
-                value={methodFilter}
-                onChange={(event) => setMethodFilter(event.target.value)}
-                className="h-9 rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All methods</option>
-                {methods.map((method) => (
-                  <option key={method} value={method}>
-                    {method.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label="Filter by HTTP method"
+                  aria-expanded={methodMenuOpen}
+                  onClick={() => setMethodMenuOpen((open) => !open)}
+                  className="min-w-36 justify-between"
+                >
+                  {methodFilter === "all"
+                    ? "All methods"
+                    : methodFilter.toUpperCase()}
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={`size-4 transition-transform ${
+                      methodMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </Button>
+                {methodMenuOpen && (
+                  <div className="absolute right-0 z-10 mt-1 w-full min-w-36 rounded-md border bg-popover p-1 shadow-md">
+                    {["all", ...methods].map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        className="flex w-full cursor-pointer items-center rounded-sm px-2 py-1.5 text-left text-sm hover:bg-muted"
+                        onClick={() => {
+                          setMethodFilter(method);
+                          setMethodMenuOpen(false);
+                        }}
+                      >
+                        {method === "all" ? "All methods" : method.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 p-4">
@@ -524,7 +550,7 @@ export default function ApiDocsPage() {
                     >
                       <button
                         type="button"
-                        className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted/40"
+                        className="flex w-full cursor-pointer items-center gap-3 p-4 text-left hover:bg-muted/40"
                         onClick={() => setExpanded(open ? null : key)}
                       >
                         <span

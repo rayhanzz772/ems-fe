@@ -480,7 +480,7 @@ const sidebarMenuButtonVariants = cva(
     variants: {
       variant: {
         default:
-          "text-muted-foreground hover:bg-muted/50 hover:text-foreground data-active:text-primary data-active:font-medium [&_svg]:text-muted-foreground data-active:[&_svg]:text-primary",
+          "text-muted-foreground hover:bg-muted/50 hover:text-foreground data-active:bg-muted/80 data-active:text-primary data-active:font-medium [&_svg]:text-muted-foreground data-active:[&_svg]:text-primary",
 
         subtle:
           "text-muted-foreground hover:bg-muted/50 hover:text-foreground data-active:bg-primary/5 data-active:text-primary data-active:font-medium [&_svg]:text-muted-foreground data-active:[&_svg]:text-primary",

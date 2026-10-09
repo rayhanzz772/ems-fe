@@ -217,7 +217,7 @@ export function AppSidebar() {
                             className={cn(
                               "size-4 shrink-0 transition-all duration-150 group-hover/btn:scale-105",
                               active
-                                ? "text-primary-foreground"
+                                ? "text-primary"
                                 : "text-muted-foreground group-hover/btn:text-foreground",
                             )}
                           />
@@ -225,7 +225,7 @@ export function AppSidebar() {
 
                           {active && !item.badge && (
                             <span
-                              className="ml-auto size-1.5 rounded-full bg-primary-foreground/90 shrink-0 group-data-[collapsible=icon]:hidden shadow-xs"
+                              className="ml-auto size-1.5 rounded-full bg-primary shrink-0 group-data-[collapsible=icon]:hidden shadow-xs"
                               aria-hidden="true"
                             />
                           )}
@@ -236,7 +236,7 @@ export function AppSidebar() {
                             className={cn(
                               "transition-colors",
                               active
-                                ? "bg-primary-foreground/20"
+                                ? "bg-primary/10 text-primary"
                                 : "bg-muted text-muted-foreground border border-border/50",
                             )}
                           >

@@ -394,9 +394,11 @@ export default function ApiDocsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(
+    const docsUrl =
       process.env.NEXT_PUBLIC_API_DOCS_URL ??
-        "http://localhost:8000/api-docs/openapi.json",
+      "http://localhost:8000/api-docs/openapi.json";
+    fetch(
+      docsUrl,
       { credentials: "include", signal: controller.signal },
     )
       .then(async (response) => {
@@ -404,7 +406,21 @@ export default function ApiDocsPage() {
           throw new Error(
             `Unable to load API documentation (${response.status}).`,
           );
-        return (await response.json()) as Document;
+        const document = (await response.json()) as Document;
+        const docsOrigin = new URL(docsUrl, window.location.origin).origin;
+        return {
+          ...document,
+          servers: document.servers?.map((server) => {
+            const serverUrl = new URL(server.url, docsOrigin);
+            if (
+              serverUrl.hostname === "localhost" ||
+              serverUrl.hostname === "127.0.0.1"
+            ) {
+              return { ...server, url: docsOrigin };
+            }
+            return server;
+          }),
+        };
       })
       .then(setDoc)
       .catch((value: unknown) => {

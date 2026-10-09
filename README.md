@@ -29,6 +29,14 @@ Frontend for the Employee Management System (EMS), built with Next.js, React, Ty
 - TanStack Query for caching, refetching, and post-mutation cache invalidation.
 - Dark mode and shadcn/Base UI components.
 
+## Responsive design
+
+<p align="center">
+  <img src="./public/assets/images/prev1.png" alt="ERD" width="900">
+  <img src="./public/assets/images/prev2.png" alt="ERD" width="900">
+  <img src="./public/assets/images/prev3.png" alt="ERD" width="900">
+</p>
+
 ## Tech stack
 
 - [Next.js](https://nextjs.org/) `16.3.6`
@@ -40,6 +48,36 @@ Frontend for the Employee Management System (EMS), built with Next.js, React, Ty
 - Recharts
 - Lucide React
 - ESLint
+
+## Project structure
+
+```bash
+.
+├── app
+│   ├── (auth)
+│   │   ├── login
+│   │   └── logout
+│   ├── (dashboard)
+│   │   └── page
+│   ├── (employees)
+│   │   ├── page
+│   │   └── [id]
+│   ├── (departments)
+│   │   └── page
+│   ├── (users)
+│   │   └── page
+│   ├── (roles)
+│   │   └── page
+│   ├── (audit-logs)
+│   │   └── page
+│   └── (api-documentation)
+│       └── page
+├── components
+├── lib
+├── public
+└── styles
+
+```
 
 ## Prerequisites
 
@@ -74,9 +112,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 NEXT_PUBLIC_API_DOCS_URL=http://localhost:8000/api-docs/openapi.json
 ```
 
-| Variable | Description |
-| --- | --- |
-| `NEXT_PUBLIC_API_URL` | Backend API base URL without a trailing slash |
+| Variable                   | Description                                         |
+| -------------------------- | --------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`      | Backend API base URL without a trailing slash       |
 | `NEXT_PUBLIC_API_DOCS_URL` | OpenAPI JSON URL used by the API Documentation page |
 
 Do not commit secrets, access tokens, or production credentials to `.env.local`.
@@ -100,16 +138,16 @@ The production server is available at [http://localhost:3000](http://localhost:3
 
 ## Frontend routes
 
-| Route | Description | Access |
-| --- | --- | --- |
-| `/` | Redirect/landing entry point | Public |
-| `/login` | Login page | Public |
-| `/dashboard` | System summary and charts | Authenticated |
-| `/employees` | Employee management | Authenticated |
-| `/departments` | Department management | Authenticated |
-| `/users` | User management | Authenticated |
-| `/roles` | Role management | Admin |
-| `/audit-logs` | Audit logs | Authenticated |
+| Route                | Description                           | Access        |
+| -------------------- | ------------------------------------- | ------------- |
+| `/`                  | Redirect/landing entry point          | Public        |
+| `/login`             | Login page                            | Public        |
+| `/dashboard`         | System summary and charts             | Authenticated |
+| `/employees`         | Employee management                   | Authenticated |
+| `/departments`       | Department management                 | Authenticated |
+| `/users`             | User management                       | Authenticated |
+| `/roles`             | Role management                       | Admin         |
+| `/audit-logs`        | Audit logs                            | Authenticated |
 | `/api-documentation` | Mini API documentation/request tester | Authenticated |
 
 ## API endpoints
@@ -124,32 +162,32 @@ For example, `/employees` becomes `http://localhost:8000/api/v1/employees`.
 
 ### Authentication
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `POST` | `/auth/login` | Sign in and receive an access token |
-| `GET` | `/auth/get-me` | Get the currently authenticated user |
-| `POST` | `/auth/logout` | Sign out and remove the local token |
+| Method | Endpoint       | Description                          |
+| ------ | -------------- | ------------------------------------ |
+| `POST` | `/auth/login`  | Sign in and receive an access token  |
+| `GET`  | `/auth/get-me` | Get the currently authenticated user |
+| `POST` | `/auth/logout` | Sign out and remove the local token  |
 
 The token is stored in `localStorage` under the `access_token` key and sent as a Bearer token by the API client.
 
 ### Dashboard
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/dashboard` | Get summary data, chart data, and recent activity |
+| Method | Endpoint     | Description                                       |
+| ------ | ------------ | ------------------------------------------------- |
+| `GET`  | `/dashboard` | Get summary data, chart data, and recent activity |
 
 ### Employees
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/employees` | List employees |
-| `GET` | `/employees/:id/detail` | Get employee details |
-| `POST` | `/employees/create` | Create an employee; admin only |
-| `PUT` | `/employees/:id/update` | Update an employee; admin only |
-| `DELETE` | `/employees/:id/delete` | Soft-delete an employee; admin only |
-| `PATCH` | `/employees/:id/status` | Update employee status; admin only |
-| `GET` | `/employees/export` | Export employees as CSV |
-| `GET` | `/employees/get-all-departments` | Get department options |
+| Method   | Endpoint                         | Description                         |
+| -------- | -------------------------------- | ----------------------------------- |
+| `GET`    | `/employees`                     | List employees                      |
+| `GET`    | `/employees/:id/detail`          | Get employee details                |
+| `POST`   | `/employees/create`              | Create an employee; admin only      |
+| `PUT`    | `/employees/:id/update`          | Update an employee; admin only      |
+| `DELETE` | `/employees/:id/delete`          | Soft-delete an employee; admin only |
+| `PATCH`  | `/employees/:id/status`          | Update employee status; admin only  |
+| `GET`    | `/employees/export`              | Export employees as CSV             |
+| `GET`    | `/employees/get-all-departments` | Get department options              |
 
 Employee list parameters used by the frontend:
 
@@ -186,46 +224,46 @@ The `employee_code` is generated by the server and does not need to be sent by t
 
 ### Users
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/users` | List users |
-| `GET` | `/users/get-all-roles` | Get roles for filters and forms |
-| `POST` | `/users/create` | Create a user; admin only |
-| `PUT` | `/users/:id/update` | Update a user; admin only |
-| `PATCH` | `/users/:id/status` | Update user status; admin only |
-| `DELETE` | `/users/:id/delete` | Soft-delete a user; admin only |
+| Method   | Endpoint               | Description                     |
+| -------- | ---------------------- | ------------------------------- |
+| `GET`    | `/users`               | List users                      |
+| `GET`    | `/users/get-all-roles` | Get roles for filters and forms |
+| `POST`   | `/users/create`        | Create a user; admin only       |
+| `PUT`    | `/users/:id/update`    | Update a user; admin only       |
+| `PATCH`  | `/users/:id/status`    | Update user status; admin only  |
+| `DELETE` | `/users/:id/delete`    | Soft-delete a user; admin only  |
 
 ### Departments
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/departments` | List departments |
-| `GET` | `/departments/:id/detail` | Get department details |
-| `POST` | `/departments/create` | Create a department; admin only |
-| `PUT` | `/departments/:id/update` | Update a department; admin only |
-| `PATCH` | `/departments/:id/status` | Update department status; admin only |
+| Method   | Endpoint                  | Description                          |
+| -------- | ------------------------- | ------------------------------------ |
+| `GET`    | `/departments`            | List departments                     |
+| `GET`    | `/departments/:id/detail` | Get department details               |
+| `POST`   | `/departments/create`     | Create a department; admin only      |
+| `PUT`    | `/departments/:id/update` | Update a department; admin only      |
+| `PATCH`  | `/departments/:id/status` | Update department status; admin only |
 | `DELETE` | `/departments/:id/delete` | Soft-delete a department; admin only |
 
 ### Roles
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/roles` | List roles |
-| `GET` | `/roles/:id/detail` | Get role details |
-| `POST` | `/roles/create` | Create a role; admin only |
-| `PUT` | `/roles/:id/update` | Update a role; admin only |
-| `PATCH` | `/roles/:id/status` | Update role status; admin only |
+| Method   | Endpoint            | Description                    |
+| -------- | ------------------- | ------------------------------ |
+| `GET`    | `/roles`            | List roles                     |
+| `GET`    | `/roles/:id/detail` | Get role details               |
+| `POST`   | `/roles/create`     | Create a role; admin only      |
+| `PUT`    | `/roles/:id/update` | Update a role; admin only      |
+| `PATCH`  | `/roles/:id/status` | Update role status; admin only |
 | `DELETE` | `/roles/:id/delete` | Soft-delete a role; admin only |
 
 The `ADMIN` role cannot be deactivated from the UI.
 
 ### Audit logs
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `GET` | `/audit-logs` | List audit logs |
-| `DELETE` | `/audit-logs/:id/delete` | Delete an audit log |
-| `GET` | `/audit-logs/export` | Export audit logs as CSV |
+| Method   | Endpoint                 | Description              |
+| -------- | ------------------------ | ------------------------ |
+| `GET`    | `/audit-logs`            | List audit logs          |
+| `DELETE` | `/audit-logs/:id/delete` | Delete an audit log      |
+| `GET`    | `/audit-logs/export`     | Export audit logs as CSV |
 
 Audit log parameters used by the frontend:
 
@@ -264,11 +302,11 @@ The frontend reads the total record count from `metadata.total_row` when availab
 
 All API endpoints require authentication. In general:
 
-| Role | Access |
-| --- | --- |
-| `ADMIN` | View data, create, update, delete, change status, export, and manage roles |
-| `HR` | View data according to backend permissions |
-| `EMPLOYEE` | View data according to backend permissions |
+| Role       | Access                                                                     |
+| ---------- | -------------------------------------------------------------------------- |
+| `ADMIN`    | View data, create, update, delete, change status, export, and manage roles |
+| `HR`       | View data according to backend permissions                                 |
+| `EMPLOYEE` | View data according to backend permissions                                 |
 
 Frontend restrictions are intended for user experience only. Final authorization must always be enforced by the backend.
 

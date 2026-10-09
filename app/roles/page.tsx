@@ -286,7 +286,7 @@ export default function RolesPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Roles</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -296,7 +296,7 @@ export default function RolesPage() {
         <Button className="w-full sm:w-auto" onClick={openCreate}>
           <Plus /> Add role
         </Button>
-      </div>
+      </section>
 
       <Card>
         <CardHeader className="gap-4 border-b">

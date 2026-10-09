@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ArrowUpRight,
-  Building2,
   Pencil,
   Plus,
   SquarePen,
@@ -322,14 +321,20 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {dashboard.department_overview.map((department) => (
+            {dashboard.department_overview.map((department, index) => (
               <div
                 key={department.department_name}
                 className="flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
-                  <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Building2 className="size-4" />
+                  <span
+                    className="flex size-8 items-center justify-center rounded-lg text-white"
+                    style={{
+                      backgroundColor:
+                        departmentColors[index % departmentColors.length],
+                    }}
+                  >
+                    {department.department_name[0]?.toUpperCase()}
                   </span>
                   <span className="text-sm font-medium">
                     {department.department_name}

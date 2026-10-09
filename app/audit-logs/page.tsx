@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -183,7 +183,6 @@ function ActionBadge({ action }: { action: Action }) {
 }
 
 export default function AuditLogPage() {
-  const queryClient = useQueryClient();
   const { can, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
   const [action, setAction] = useState("all");
@@ -195,8 +194,6 @@ export default function AuditLogPage() {
   const [userId, setUserId] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [selected, setSelected] = useState<AuditLog | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AuditLog | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 5;
 
@@ -258,7 +255,7 @@ export default function AuditLogPage() {
   const paginationPages =
     pageCount <= 4
       ? Array.from({ length: pageCount }, (_, index) => index + 1)
-      : [1, 2, "ellipsis", pageCount - 1, pageCount] as const;
+      : ([1, 2, "ellipsis", pageCount - 1, pageCount] as const);
   const visibleLogs = logs;
 
   if (authLoading) return null;
@@ -297,26 +294,6 @@ export default function AuditLogPage() {
         "Unable to export audit logs",
         requestError instanceof Error ? requestError.message : undefined,
       );
-    }
-  }
-
-  async function deleteLog() {
-    if (!deleteTarget) return;
-
-    setDeleting(true);
-    try {
-      await api.delete(`/audit-logs/${deleteTarget.id}/delete`);
-      showSuccess("Audit log deleted successfully.");
-      setDeleteTarget(null);
-      await queryClient.invalidateQueries({ queryKey: ["audit-logs"] });
-    } catch (requestError) {
-      showError(
-        requestError instanceof ApiError
-          ? requestError.message
-          : "Unable to delete audit log.",
-      );
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -390,22 +367,25 @@ export default function AuditLogPage() {
                   Array.from({ length: 5 }, (_, index) => (
                     <TableRow key={index}>
                       <TableCell>
-                        <Skeleton className="h-5 w-28" />
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="size-9 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-36" />
+                            <Skeleton className="h-3 w-56" />
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-5 w-64" />
+                        <Skeleton className="h-7 w-24 rounded-full" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-20 rounded-full" />
+                        <Skeleton className="h-4 w-24" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="ml-auto h-8 w-20" />
+                        <Skeleton className="h-4 w-36" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="ml-auto h-8 w-20" />
-                      </TableCell>
-                      <TableCell>
-                        <Skeleton className="ml-auto h-8 w-20" />
+                        <Skeleton className="ml-auto size-8" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -447,15 +427,6 @@ export default function AuditLogPage() {
                             onClick={() => setSelected(log)}
                           >
                             <Eye />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Delete audit log"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDeleteTarget(log)}
-                          >
-                            <Trash />
                           </Button>
                         </div>
                       </TableCell>
@@ -757,39 +728,6 @@ export default function AuditLogPage() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(deleteTarget)}
-        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete audit log?</DialogTitle>
-            <DialogDescription>
-              This action cannot be undone. The selected audit log for{" "}
-              <span className="font-medium text-foreground">
-                {deleteTarget?.entity}
-              </span>{" "}
-              will be permanently deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose
-              render={<Button variant="outline" disabled={deleting} />}
-            >
-              Cancel
-            </DialogClose>
-            <Button
-              variant="destructive"
-              disabled={deleting}
-              onClick={() => void deleteLog()}
-            >
-              <Trash />
-              {deleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </main>

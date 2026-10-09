@@ -30,6 +30,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Spinner,
   Switch,
   Skeleton,
 } from "@/components/ui";
@@ -197,14 +198,17 @@ function StatusBadge({ active }: { active: boolean }) {
 
 function StatusToggle({
   active,
+  disabled,
   onClick,
 }: {
   active: boolean;
+  disabled: boolean;
   onClick: () => void;
 }) {
   return (
     <Switch
       checked={active}
+      disabled={disabled}
       onCheckedChange={onClick}
       aria-label={`Turn status ${active ? "off" : "on"}`}
     />
@@ -227,8 +231,13 @@ export default function EmployeePage() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
+  const [savingEmployee, setSavingEmployee] = useState(false);
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const pageSize = 5;
   const queryClient = useQueryClient();
   const { can, loading: authLoading } = useAuth();
@@ -374,6 +383,7 @@ export default function EmployeePage() {
 
   async function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (savingEmployee) return;
     setActionError("");
     if (!form.department_id) {
       setActionError("Please select a department.");
@@ -387,6 +397,7 @@ export default function EmployeePage() {
       setActionError("You do not have permission to create employees.");
       return;
     }
+    setSavingEmployee(true);
     try {
       if (editing) {
         await api.put(`/employees/${editing.id}/update`, form);
@@ -406,11 +417,15 @@ export default function EmployeePage() {
         "Unable to save employee",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setSavingEmployee(false);
     }
   }
 
   async function toggleStatus(employee: Employee) {
+    if (updatingStatusIds.has(employee.id)) return;
     setActionError("");
+    setUpdatingStatusIds((current) => new Set(current).add(employee.id));
     try {
       await api.patch(`/employees/${employee.id}/status`, {
         status: !employee.status,
@@ -427,10 +442,17 @@ export default function EmployeePage() {
         "Unable to update employee status",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setUpdatingStatusIds((current) => {
+        const next = new Set(current);
+        next.delete(employee.id);
+        return next;
+      });
     }
   }
 
   async function deleteEmployee(employee: Employee) {
+    if (deleting) return;
     setActionError("");
     setDeleting(true);
     try {
@@ -455,6 +477,8 @@ export default function EmployeePage() {
   }
 
   async function exportCsv() {
+    if (exporting) return;
+    setExporting(true);
     try {
       const csv = await api.get<string>("/employees/export");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -471,6 +495,8 @@ export default function EmployeePage() {
           ? requestError.message
           : "Unable to export employees.",
       );
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -505,8 +531,10 @@ export default function EmployeePage() {
               className="w-full sm:w-auto"
               variant="outline"
               onClick={exportCsv}
+              disabled={exporting}
             >
-              <Download /> Export CSV
+              {exporting ? <Spinner /> : <Download />}
+              {exporting ? "Exporting..." : "Export CSV"}
             </Button>
           )}
           {can("employee.create") && (
@@ -639,6 +667,7 @@ export default function EmployeePage() {
                     <TableCell>
                       <StatusToggle
                         active={employee.status}
+                        disabled={updatingStatusIds.has(employee.id)}
                         onClick={() => void toggleStatus(employee)}
                       />
                     </TableCell>
@@ -969,7 +998,10 @@ export default function EmployeePage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => !savingEmployee && setFormOpen(open)}
+      >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
@@ -1099,14 +1131,25 @@ export default function EmployeePage() {
                   {actionError}
                 </p>
               )}
-              <DialogClose render={<Button variant="outline" />}>
+              <DialogClose
+                render={<Button variant="outline" disabled={savingEmployee} />}
+              >
                 Cancel
               </DialogClose>
               <Button
                 type="submit"
-                disabled={!form.department_id || !form.position}
+                disabled={
+                  savingEmployee || !form.department_id || !form.position
+                }
               >
-                {editing ? "Save changes" : "Add employee"}
+                {savingEmployee && <Spinner />}
+                {savingEmployee
+                  ? editing
+                    ? "Saving..."
+                    : "Creating..."
+                  : editing
+                    ? "Save changes"
+                    : "Add employee"}
               </Button>
             </DialogFooter>
           </form>

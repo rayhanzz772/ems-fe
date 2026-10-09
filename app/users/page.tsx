@@ -28,6 +28,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Spinner,
   Switch,
   Skeleton,
 } from "@/components/ui";
@@ -151,6 +152,10 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [form, setForm] = useState<UserForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
+  const [savingUser, setSavingUser] = useState(false);
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [, setActionError] = useState("");
@@ -256,11 +261,13 @@ export default function UsersPage() {
 
   async function saveUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (savingUser) return;
     setActionError("");
     if (!editing && !can("user.create")) {
       setActionError("You do not have permission to create users.");
       return;
     }
+    setSavingUser(true);
     try {
       const payload: Record<string, string | boolean> = {
         email: form.email,
@@ -286,10 +293,13 @@ export default function UsersPage() {
         "Unable to save user",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setSavingUser(false);
     }
   }
 
   async function toggleStatus(user: User, nextStatus: boolean) {
+    if (updatingStatusIds.has(user.id)) return;
     setActionError("");
     if (
       user.id === currentUserId ||
@@ -299,6 +309,7 @@ export default function UsersPage() {
       return;
     }
 
+    setUpdatingStatusIds((current) => new Set(current).add(user.id));
     try {
       await api.patch(`/users/${user.id}/status`, { status: nextStatus });
       await queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -315,6 +326,12 @@ export default function UsersPage() {
         "Unable to update user status",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setUpdatingStatusIds((current) => {
+        const next = new Set(current);
+        next.delete(user.id);
+        return next;
+      });
     }
   }
 
@@ -476,7 +493,9 @@ export default function UsersPage() {
                         <TableCell>
                           <Switch
                             checked={user.status}
-                            disabled={isCurrentUser}
+                            disabled={
+                              isCurrentUser || updatingStatusIds.has(user.id)
+                            }
                             onCheckedChange={(checked) =>
                               void toggleStatus(user, checked)
                             }
@@ -837,11 +856,20 @@ export default function UsersPage() {
               Active account
             </label>
             <DialogFooter>
-              <DialogClose render={<Button variant="outline" />}>
+              <DialogClose
+                render={<Button variant="outline" disabled={savingUser} />}
+              >
                 Cancel
               </DialogClose>
-              <Button type="submit">
-                {editing ? "Save changes" : "Add user"}
+              <Button type="submit" disabled={savingUser}>
+                {savingUser && <Spinner />}
+                {savingUser
+                  ? editing
+                    ? "Saving..."
+                    : "Creating user..."
+                  : editing
+                    ? "Save changes"
+                    : "Add user"}
               </Button>
             </DialogFooter>
           </form>

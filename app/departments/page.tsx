@@ -34,6 +34,7 @@ import {
   DialogTitle,
   Input,
   Label,
+  Spinner,
   Switch,
   Skeleton,
   Textarea,
@@ -129,6 +130,10 @@ export default function DepartmentPage() {
   const [editing, setEditing] = useState<Department | null>(null);
   const [form, setForm] = useState(emptyDepartment);
   const [formOpen, setFormOpen] = useState(false);
+  const [savingDepartment, setSavingDepartment] = useState(false);
+  const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [deleteError, setDeleteError] = useState("");
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
@@ -223,6 +228,7 @@ export default function DepartmentPage() {
 
   async function saveDepartment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (savingDepartment) return;
     setDeleteError("");
     if (!editing && !can("department.create")) {
       setDeleteError("You do not have permission to create departments.");
@@ -232,6 +238,7 @@ export default function DepartmentPage() {
       name: form.name.trim(),
       description: form.description.trim(),
     };
+    setSavingDepartment(true);
     try {
       if (editing) {
         await api.put(`/departments/${editing.id}/update`, values);
@@ -251,10 +258,13 @@ export default function DepartmentPage() {
         "Unable to save department",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setSavingDepartment(false);
     }
   }
 
   async function deleteDepartment(department: Department) {
+    if (deleting) return;
     setDeleteError("");
     setDeleting(true);
     try {
@@ -279,8 +289,13 @@ export default function DepartmentPage() {
   }
 
   async function toggleStatus(department: Department) {
-    if (currentUserRole !== "ADMIN") return;
+    if (
+      currentUserRole !== "ADMIN" ||
+      updatingStatusIds.has(department.id)
+    )
+      return;
     setDeleteError("");
+    setUpdatingStatusIds((current) => new Set(current).add(department.id));
     try {
       await api.patch(`/departments/${department.id}/status`, {
         status: !department.status,
@@ -297,6 +312,12 @@ export default function DepartmentPage() {
           : "Unable to update department status.";
       setDeleteError(message);
       showError("Unable to update department status", message);
+    } finally {
+      setUpdatingStatusIds((current) => {
+        const next = new Set(current);
+        next.delete(department.id);
+        return next;
+      });
     }
   }
 
@@ -433,7 +454,10 @@ export default function DepartmentPage() {
                     <TableCell>
                       <Switch
                         checked={department.status}
-                        disabled={currentUserRole !== "ADMIN"}
+                        disabled={
+                          currentUserRole !== "ADMIN" ||
+                          updatingStatusIds.has(department.id)
+                        }
                         onCheckedChange={() => void toggleStatus(department)}
                         aria-label={`Turn department status ${department.status ? "off" : "on"}`}
                       />
@@ -636,7 +660,10 @@ export default function DepartmentPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => !savingDepartment && setFormOpen(open)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -684,11 +711,20 @@ export default function DepartmentPage() {
               </p>
             </div>
             <DialogFooter>
-              <DialogClose render={<Button variant="outline" />}>
+              <DialogClose
+                render={<Button variant="outline" disabled={savingDepartment} />}
+              >
                 Cancel
               </DialogClose>
-              <Button type="submit">
-                {editing ? "Save changes" : "Add department"}
+              <Button type="submit" disabled={savingDepartment}>
+                {savingDepartment && <Spinner />}
+                {savingDepartment
+                  ? editing
+                    ? "Saving..."
+                    : "Creating..."
+                  : editing
+                    ? "Save changes"
+                    : "Add department"}
               </Button>
             </DialogFooter>
           </form>

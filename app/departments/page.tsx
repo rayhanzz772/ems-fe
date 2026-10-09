@@ -66,10 +66,10 @@ type Department = {
 
 type DepartmentApi = {
   id: string | number;
-  name: string;
+  name?: string | null;
   description?: string | null;
-  employee_count?: number;
-  employeeCount?: number;
+  employee_count?: number | string;
+  employeeCount?: number | string;
   _count?: { employees?: number };
   status: boolean;
 };
@@ -86,15 +86,15 @@ type DepartmentListData =
     };
 
 function normalizeDepartment(value: DepartmentApi): Department {
+  const employeeCount = Number(
+    value.employee_count ?? value.employeeCount ?? value._count?.employees ?? 0,
+  );
+
   return {
     id: String(value.id),
-    name: value.name,
+    name: value.name ?? "",
     description: value.description ?? "",
-    employeeCount:
-      value.employee_count ??
-      value.employeeCount ??
-      value._count?.employees ??
-      0,
+    employeeCount: Number.isFinite(employeeCount) ? employeeCount : 0,
     status: value.status ?? true,
   };
 }
@@ -198,10 +198,16 @@ export default function DepartmentPage() {
   async function openDetail(department: Department) {
     setDeleteError("");
     try {
-      const response = await api.get<ApiResponse<DepartmentApi>>(
-        `/departments/${department.id}/detail`,
-      );
-      setSelected(normalizeDepartment(response.data));
+      const response = await api.get<
+        ApiResponse<DepartmentApi | DepartmentApi[]>
+      >(`/departments/${department.id}/detail`);
+      const detail = Array.isArray(response.data)
+        ? response.data[0]
+        : response.data;
+      if (!detail) {
+        throw new ApiError("Department details were not found.", 404);
+      }
+      setSelected(normalizeDepartment(detail));
     } catch (requestError) {
       setSelected(department);
       setDeleteError(

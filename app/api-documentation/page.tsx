@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  AlertCircle,
-  ChevronDown,
-  Search,
-  Send,
-} from "lucide-react";
+import { AlertCircle, ChevronDown, Search, Send } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -533,7 +528,7 @@ export default function ApiDocsPage() {
                         onClick={() => setExpanded(open ? null : key)}
                       >
                         <span
-                          className={`w-20 rounded px-2 py-1 text-center text-xs font-bold uppercase ${methodColors[entry.method]}`}
+                          className={`w-20 rounded px-2 py-2 text-center text-xs font-bold uppercase ${methodColors[entry.method]}`}
                         >
                           {entry.method}
                         </span>

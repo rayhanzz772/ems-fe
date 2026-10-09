@@ -9,7 +9,7 @@ type SidebarLogoProps = {
 export function SidebarLogo({ className }: SidebarLogoProps) {
   return (
     <Link
-      href="/login"
+      href="/dashboard"
       aria-label="Morrow home"
       className={cn(
         "inline-flex items-center gap-2.5 font-semibold tracking-tight",

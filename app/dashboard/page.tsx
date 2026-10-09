@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -33,7 +34,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui";
-import { ApiError, getDashboard, type DashboardData } from "@/lib/api";
+import { ApiError, getDashboard, getMe, type DashboardData } from "@/lib/api";
 
 const departmentConfig = {
   employees: { label: "Employees", color: "var(--chart-1)" },
@@ -90,10 +91,18 @@ function getActivityVisual(action: string) {
 }
 
 export default function DashboardPage() {
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const dashboardQuery = useQuery<DashboardData>({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
   });
+
+  useEffect(() => {
+    void getMe()
+      .then((user) => setCurrentUserRole(user.role))
+      .catch(() => setCurrentUserRole(null));
+  }, []);
+
   const dashboard = dashboardQuery.data;
   const error =
     dashboardQuery.error instanceof ApiError
@@ -213,13 +222,15 @@ export default function DashboardPage() {
           >
             <Activity /> View activity
           </Button>
-          <Button
-            className="w-full sm:w-auto"
-            nativeButton={false}
-            render={<Link href="/employees" />}
-          >
-            <Plus /> Add employee
-          </Button>
+          {currentUserRole === "ADMIN" && (
+            <Button
+              className="w-full sm:w-auto"
+              nativeButton={false}
+              render={<Link href="/employees" />}
+            >
+              <Plus /> Add employee
+            </Button>
+          )}
         </div>
       </section>
 

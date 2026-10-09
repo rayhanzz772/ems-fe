@@ -102,8 +102,8 @@ export function Header() {
     "/users": { section: "Management", label: "Users" },
     "/departments": { section: "Management", label: "Departments" },
     "/employees": { section: "Management", label: "Employees" },
-    "/audit-logs": { section: "Other", label: "Audit Log" },
-    "/api-documentation": { section: "Other", label: "API Docs" },
+    "/audit-logs": { section: "System", label: "Audit Log" },
+    "/api-documentation": { section: "System", label: "API Docs" },
     "/roles": { section: "Management", label: "Roles" },
   }[pathname];
 

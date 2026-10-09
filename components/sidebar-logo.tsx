@@ -12,11 +12,11 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
       href="/dashboard"
       aria-label="Morrow home"
       className={cn(
-        "inline-flex items-center gap-2.5 font-semibold tracking-tight",
+        "group/logo flex w-full items-center gap-3 rounded-lg px-2 py-1.5",
         className,
       )}
     >
-      <div className="relative h-6 w-6 flex">
+      <div className="relative flex size-8 shrink-0 items-center justify-center">
         <Image
           src="/assets/logo/logo-dark.png"
           alt="Morrow"
@@ -24,18 +24,27 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
           height={796}
           sizes="32px"
           priority
-          className="size-6 object-contain dark:hidden"
+          className="size-5 object-contain dark:hidden"
         />
         <Image
           src="/assets/logo/logo-white.png"
-          alt=""
-          aria-hidden="true"
+          alt="Morrow"
           width={768}
           height={796}
           sizes="32px"
           priority
-          className="hidden size-6 object-contain dark:block"
+          className="hidden size-5 object-contain dark:block"
         />
+      </div>
+      <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-bold tracking-tight text-foreground">
+            Morrow
+          </span>
+        </div>
+        <span className="truncate text-[11px] font-medium text-muted-foreground">
+          Employee Management System
+        </span>
       </div>
     </Link>
   );

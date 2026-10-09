@@ -139,7 +139,7 @@ const emptyForm: EmployeeForm = {
   email: "",
   phone_number: "",
   department_id: "",
-  position: positions[0],
+  position: "",
   hire_date: "",
   address: "",
   status: true,
@@ -375,6 +375,14 @@ export default function EmployeePage() {
   async function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionError("");
+    if (!form.department_id) {
+      setActionError("Please select a department.");
+      return;
+    }
+    if (!form.position) {
+      setActionError("Please select a position.");
+      return;
+    }
     if (!editing && !can("employee.create")) {
       setActionError("You do not have permission to create employees.");
       return;
@@ -1024,12 +1032,17 @@ export default function EmployeePage() {
               <Label htmlFor="department">Department</Label>
               <select
                 id="department"
+                required
                 value={form.department_id}
-                onChange={(event) =>
-                  setForm({ ...form, department_id: event.target.value })
-                }
+                onChange={(event) => {
+                  setForm({ ...form, department_id: event.target.value });
+                  setActionError("");
+                }}
                 className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
+                <option value="" disabled>
+                  Select Department
+                </option>
                 {departmentOptions.map((department) => (
                   <option key={department.id} value={department.id}>
                     {department.name}
@@ -1041,12 +1054,17 @@ export default function EmployeePage() {
               <Label htmlFor="position">Position</Label>
               <select
                 id="position"
+                required
                 value={form.position}
-                onChange={(event) =>
-                  setForm({ ...form, position: event.target.value })
-                }
+                onChange={(event) => {
+                  setForm({ ...form, position: event.target.value });
+                  setActionError("");
+                }}
                 className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
               >
+                <option value="" disabled>
+                  Select Position
+                </option>
                 {positions.map((position) => (
                   <option key={position}>{position}</option>
                 ))}
@@ -1076,10 +1094,18 @@ export default function EmployeePage() {
               />
             </div>
             <DialogFooter className="sm:col-span-2">
+              {actionError && (
+                <p className="mr-auto text-sm text-destructive" role="alert">
+                  {actionError}
+                </p>
+              )}
               <DialogClose render={<Button variant="outline" />}>
                 Cancel
               </DialogClose>
-              <Button type="submit">
+              <Button
+                type="submit"
+                disabled={!form.department_id || !form.position}
+              >
                 {editing ? "Save changes" : "Add employee"}
               </Button>
             </DialogFooter>

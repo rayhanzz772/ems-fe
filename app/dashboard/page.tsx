@@ -339,7 +339,7 @@ export default function DashboardPage() {
               nativeButton={false}
               variant="ghost"
               size="sm"
-              render={<Link href="/department" />}
+              render={<Link href="/departments" />}
             >
               View all <ArrowUpRight />
             </Button>

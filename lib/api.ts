@@ -12,29 +12,16 @@ export class ApiError extends Error {
   }
 }
 
-function getAccessToken() {
-  return typeof window === "undefined"
-    ? null
-    : window.localStorage.getItem("access_token");
-}
-
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  if (!API_URL) {
-    throw new Error("NEXT_PUBLIC_API_URL is not configured.");
-  }
+  if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not configured.");
 
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
-  }
-
-  const token = getAccessToken();
-  if (token && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -55,6 +42,13 @@ export async function apiRequest<T>(
       typeof body.message === "string"
         ? body.message
         : `API request failed with status ${response.status}.`;
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      !["/login", "/register"].includes(window.location.pathname)
+    ) {
+      window.location.assign("/login");
+    }
     throw new ApiError(message, response.status, body);
   }
 
@@ -75,8 +69,9 @@ export const api = {
 export type AuthUser = {
   id: string;
   email: string;
-  role: "ADMIN" | "HR" | "EMPLOYEE";
+  role: string;
   status?: boolean;
+  permissions?: string[];
 };
 
 export type ApiResponse<T> = {
@@ -91,8 +86,7 @@ export function getPaginationTotal(
   fallback: number,
 ) {
   const totalRow = metadata?.total_row;
-  if (typeof totalRow === "number") return totalRow;
-  return fallback;
+  return typeof totalRow === "number" ? totalRow : fallback;
 }
 
 export async function login(email: string, password: string) {
@@ -100,14 +94,6 @@ export async function login(email: string, password: string) {
     email,
     password,
   });
-  const data = response.data as AuthUser & {
-    token?: string;
-    access_token?: string;
-  };
-  const token = data.token ?? data.access_token;
-  if (token && typeof window !== "undefined") {
-    window.localStorage.setItem("access_token", token);
-  }
   return response.data;
 }
 
@@ -117,13 +103,7 @@ export async function getMe() {
 }
 
 export async function logout() {
-  try {
-    await api.post<ApiResponse<null>>("/auth/logout", {});
-  } finally {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("access_token");
-    }
-  }
+  await api.post<ApiResponse<null>>("/auth/logout", {});
 }
 
 export type DashboardData = {

@@ -1,23 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
   Eye,
+  KeyRound,
   Pencil,
   Plus,
   Search,
   Trash2,
 } from "lucide-react";
-import {
-  ApiError,
-  api,
-  getMe,
-  getPaginationTotal,
-  type ApiResponse,
-} from "@/lib/api";
+import { ApiError, api, getPaginationTotal, type ApiResponse } from "@/lib/api";
 import {
   Button,
   Card,
@@ -55,12 +50,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
+import { useAuth } from "@/hooks/use-auth";
 
 type Role = {
   id: string;
   name: string;
   description: string;
   status: boolean;
+};
+
+type Permission = {
+  id: string;
+  key: string;
+  resource: string;
+  action: string;
+  description: string;
 };
 
 type RoleApi = Omit<Role, "id"> & { id: string | number };
@@ -83,6 +87,50 @@ function normalizeRole(role: RoleApi): Role {
     description: role.description ?? "",
     status: role.status ?? true,
   };
+}
+
+function isAdminRole(role: Role | null) {
+  return role?.name.trim().toUpperCase() === "ADMIN";
+}
+
+function normalizePermission(permission: {
+  id: string | number;
+  key?: string;
+  resource?: string;
+  action?: string;
+  description?: string;
+}) {
+  const key = permission.key ?? String(permission.id);
+  const [resource = key, action = ""] = key.split(".");
+  return {
+    id: String(permission.id),
+    key,
+    resource: permission.resource ?? resource,
+    action: permission.action ?? action,
+    description: permission.description ?? "",
+  };
+}
+
+function getPermissionItems(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data;
+  if (typeof data !== "object" || data === null) return [];
+  const payload = data as { items?: unknown[]; permissions?: unknown[] };
+  return payload.permissions ?? payload.items ?? [];
+}
+
+function isPermissionRecord(item: unknown): item is {
+  id: string | number;
+  key?: string;
+  resource?: string;
+  action?: string;
+  description?: string;
+} {
+  return (
+    typeof item === "object" &&
+    item !== null &&
+    "id" in item &&
+    (typeof item.id === "string" || typeof item.id === "number")
+  );
 }
 
 function getRoleItems(data: RoleListData) {
@@ -110,10 +158,10 @@ function StatusBadge({ active }: { active: boolean }) {
 
 export default function RolesPage() {
   const queryClient = useQueryClient();
+  const { can, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [selected, setSelected] = useState<Role | null>(null);
   const [editing, setEditing] = useState<Role | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
@@ -122,16 +170,18 @@ export default function RolesPage() {
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [permissionTarget, setPermissionTarget] = useState<Role | null>(null);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>(
+    [],
+  );
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsSaving, setPermissionsSaving] = useState(false);
   const pageSize = 10;
-
-  useEffect(() => {
-    void getMe()
-      .then((user) => setCurrentUserRole(user.role))
-      .catch(() => setCurrentUserRole(null));
-  }, []);
 
   const rolesQuery = useQuery({
     queryKey: ["roles", page, query, sortAsc],
+    enabled: !authLoading && can("role.read"),
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -171,12 +221,14 @@ export default function RolesPage() {
   const currentPage = Math.min(page, pageCount);
 
   function openCreate() {
+    if (!can("role.create")) return;
     setEditing(null);
     setForm({ ...emptyForm });
     setFormOpen(true);
   }
 
   function openEdit(role: Role) {
+    if (isAdminRole(role) || !can("role.update")) return;
     setEditing(role);
     setForm({
       name: role.name,
@@ -187,23 +239,70 @@ export default function RolesPage() {
   }
 
   async function openDetail(role: Role) {
+    setSelected(role);
+  }
+
+  async function openPermissionEditor(role: Role) {
+    if (role.name.toUpperCase() === "ADMIN" || !can("role.permission.assign")) {
+      return;
+    }
+    setPermissionTarget(role);
+    setPermissionsLoading(true);
     try {
-      const response = await api.get<ApiResponse<RoleApi>>(
-        `/roles/${role.id}/detail`,
-      );
-      setSelected(normalizeRole(response.data));
+      const [catalogResponse, assignedResponse] = await Promise.all([
+        api.get<ApiResponse<unknown>>("/permissions"),
+        api.get<ApiResponse<unknown>>(`/roles/${role.id}/permissions`),
+      ]);
+      const catalog = getPermissionItems(catalogResponse.data)
+        .filter(isPermissionRecord)
+        .map(normalizePermission);
+      const assigned = getPermissionItems(assignedResponse.data)
+        .filter(isPermissionRecord)
+        .map(normalizePermission);
+      setPermissions(catalog);
+      setSelectedPermissionIds(assigned.map((permission) => permission.id));
     } catch (requestError) {
-      setSelected(role);
+      setPermissionTarget(null);
       showError(
-        "Unable to load role details",
+        "Unable to load permissions",
         requestError instanceof Error ? requestError.message : undefined,
       );
+    } finally {
+      setPermissionsLoading(false);
+    }
+  }
+
+  async function savePermissions() {
+    if (
+      !permissionTarget ||
+      permissionTarget.name.toUpperCase() === "ADMIN" ||
+      !can("role.permission.assign")
+    ) {
+      return;
+    }
+    const permissionIds = selectedPermissionIds.filter((id) =>
+      permissions.some((permission) => permission.id === id),
+    );
+    setPermissionsSaving(true);
+    try {
+      await api.put(`/roles/${permissionTarget.id}/permissions`, {
+        permission_ids: permissionIds,
+      });
+      setPermissionTarget(null);
+      showSuccess("Role permissions updated");
+    } catch (requestError) {
+      showError(
+        "Unable to update permissions",
+        requestError instanceof Error ? requestError.message : undefined,
+      );
+    } finally {
+      setPermissionsSaving(false);
     }
   }
 
   async function saveRole(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (currentUserRole !== "ADMIN") return;
+    if (!can(editing ? "role.update" : "role.create")) return;
     setSaving(true);
     try {
       const values = {
@@ -230,7 +329,9 @@ export default function RolesPage() {
   }
 
   async function deleteRole() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || isAdminRole(deleteTarget) || !can("role.delete")) {
+      return;
+    }
     setDeleting(true);
     try {
       await api.delete(`/roles/${deleteTarget.id}/delete`);
@@ -249,11 +350,11 @@ export default function RolesPage() {
   }
 
   async function toggleStatus(role: Role, status: boolean) {
-    if (currentUserRole !== "ADMIN") return;
+    if (!can("role.update")) return;
 
     setUpdatingStatusId(role.id);
     try {
-      await api.patch(`/roles/${role.id}/status`, { status });
+      await api.patch(`/roles/${role.id}/status`, undefined);
       if (selected?.id === role.id) {
         setSelected({ ...selected, status });
       }
@@ -269,7 +370,8 @@ export default function RolesPage() {
     }
   }
 
-  if (currentUserRole !== "ADMIN" && currentUserRole !== null) {
+  if (authLoading) return null;
+  if (!can("role.read")) {
     return (
       <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
         <Card>
@@ -293,9 +395,11 @@ export default function RolesPage() {
             Manage application roles and their availability.
           </p>
         </div>
-        <Button className="w-full sm:w-auto" onClick={openCreate}>
-          <Plus /> Add role
-        </Button>
+        {can("role.create") && (
+          <Button className="w-full sm:w-auto" onClick={openCreate}>
+            <Plus /> Add role
+          </Button>
+        )}
       </section>
 
       <Card>
@@ -336,6 +440,7 @@ export default function RolesPage() {
             <Table className="min-w-[760px] overflow-hidden rounded-lg border">
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="w-16">No.</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Status</TableHead>
@@ -346,6 +451,9 @@ export default function RolesPage() {
                 {loading &&
                   Array.from({ length: 4 }, (_, index) => (
                     <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-8" />
+                      </TableCell>
                       <TableCell>
                         <Skeleton className="h-5 w-28" />
                       </TableCell>
@@ -361,8 +469,11 @@ export default function RolesPage() {
                     </TableRow>
                   ))}
                 {!loading &&
-                  roles.map((role) => (
+                  roles.map((role, index) => (
                     <TableRow key={role.id}>
+                      <TableCell className="text-muted-foreground">
+                        {(currentPage - 1) * pageSize + index + 1}
+                      </TableCell>
                       <TableCell>
                         <button
                           className="font-semibold hover:underline"
@@ -379,7 +490,8 @@ export default function RolesPage() {
                           <Switch
                             checked={role.status}
                             disabled={
-                              role.name.toUpperCase() === "ADMIN" ||
+                              !can("role.update") ||
+                              isAdminRole(role) ||
                               updatingStatusId === role.id
                             }
                             onCheckedChange={(status) =>
@@ -393,31 +505,50 @@ export default function RolesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="View role"
-                            onClick={() => void openDetail(role)}
-                          >
-                            <Eye />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Edit role"
-                            onClick={() => openEdit(role)}
-                          >
-                            <Pencil />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Delete role"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDeleteTarget(role)}
-                          >
-                            <Trash2 />
-                          </Button>
+                          {can("role.update") && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="View role"
+                              onClick={() => void openDetail(role)}
+                            >
+                              <Eye />
+                            </Button>
+                          )}
+                          {can("role.permission.assign") && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Manage permissions"
+                              disabled={isAdminRole(role)}
+                              onClick={() => void openPermissionEditor(role)}
+                            >
+                              <KeyRound />
+                            </Button>
+                          )}
+                          {can("role.update") && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Edit role"
+                              disabled={isAdminRole(role)}
+                              onClick={() => openEdit(role)}
+                            >
+                              <Pencil />
+                            </Button>
+                          )}
+                          {can("role.delete") && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Delete role"
+                              className="text-destructive hover:text-destructive"
+                              disabled={isAdminRole(role)}
+                              onClick={() => setDeleteTarget(role)}
+                            >
+                              <Trash2 />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -425,7 +556,7 @@ export default function RolesPage() {
                 {!loading && !roles.length && (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="h-32 text-center text-muted-foreground"
                     >
                       No roles found.
@@ -514,24 +645,94 @@ export default function RolesPage() {
               </div>
               <StatusBadge active={selected.status} />
               <DialogFooter>
-                <Button
-                  variant="destructive"
-                  onClick={() => setDeleteTarget(selected)}
-                >
-                  <Trash2 /> Delete
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelected(null);
-                    openEdit(selected);
-                  }}
-                >
-                  <Pencil /> Edit role
-                </Button>
+                {can("role.delete") && (
+                  <Button
+                    variant="destructive"
+                    disabled={isAdminRole(selected)}
+                    onClick={() => setDeleteTarget(selected)}
+                  >
+                    <Trash2 /> Delete
+                  </Button>
+                )}
+                {can("role.update") && (
+                  <Button
+                    variant="outline"
+                    disabled={isAdminRole(selected)}
+                    onClick={() => {
+                      setSelected(null);
+                      openEdit(selected);
+                    }}
+                  >
+                    <Pencil /> Edit role
+                  </Button>
+                )}
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(permissionTarget)}
+        onOpenChange={(open) =>
+          !open && !permissionsSaving && setPermissionTarget(null)
+        }
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage permissions</DialogTitle>
+            <DialogDescription>
+              Select the permissions granted to {permissionTarget?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          {permissionsLoading ? (
+            <Skeleton className="h-48 w-full" />
+          ) : permissions.length === 0 ? (
+            <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              No permissions are available in the permission catalog.
+            </p>
+          ) : (
+            <div className="grid max-h-[55vh] gap-2 overflow-y-auto sm:grid-cols-2">
+              {permissions.map((permission) => (
+                <label
+                  key={permission.id}
+                  className="flex items-start gap-3 rounded-md border p-3 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPermissionIds.includes(permission.id)}
+                    onChange={(event) =>
+                      setSelectedPermissionIds((current) =>
+                        event.target.checked
+                          ? [...current, permission.id]
+                          : current.filter((id) => id !== permission.id),
+                      )
+                    }
+                  />
+                  <span>
+                    <span className="block font-medium">{permission.key}</span>
+                    <span className="text-muted-foreground">
+                      {permission.description ||
+                        `${permission.resource} · ${permission.action}`}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <DialogClose
+              render={<Button variant="outline" disabled={permissionsSaving} />}
+            >
+              Cancel
+            </DialogClose>
+            <Button
+              onClick={() => void savePermissions()}
+              disabled={permissionsLoading || permissionsSaving}
+            >
+              {permissionsSaving ? "Saving..." : "Save permissions"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -22,7 +22,8 @@ Frontend for the Employee Management System (EMS), built with Next.js, React, Ty
   - CSV export.
 - User management with roles loaded dynamically from the API.
 - Department management with employee counts and status controls.
-- Role management for administrators.
+- Role-based access control (RBAC) with permission-gated navigation, pages, and actions.
+- Role management with a database-backed permission catalog and role permission assignment.
 - Audit logs with filtering, sorting, detail view, deletion, and CSV export.
 - OpenAPI-based API documentation and request tester.
 - Loading, skeleton, empty, error, toast, and responsive mobile states.
@@ -142,12 +143,12 @@ The production server is available at [http://localhost:3000](http://localhost:3
 | -------------------- | ------------------------------------- | ------------- |
 | `/`                  | Redirect/landing entry point          | Public        |
 | `/login`             | Login page                            | Public        |
-| `/dashboard`         | System summary and charts             | Authenticated |
-| `/employees`         | Employee management                   | Authenticated |
-| `/departments`       | Department management                 | Authenticated |
-| `/users`             | User management                       | Authenticated |
-| `/roles`             | Role management                       | Admin         |
-| `/audit-logs`        | Audit logs                            | Authenticated |
+| `/dashboard`         | System summary and charts             | `dashboard.read` |
+| `/employees`         | Employee management                   | `employee.read` |
+| `/departments`       | Department management                 | `department.read` |
+| `/users`             | User management                       | `user.read` |
+| `/roles`             | Role management                       | `role.read` |
+| `/audit-logs`        | Audit logs                            | `audit_log.read` |
 | `/api-documentation` | Mini API documentation/request tester | Authenticated |
 
 ## API endpoints
@@ -164,11 +165,67 @@ For example, `/employees` becomes `http://localhost:8000/api/v1/employees`.
 
 | Method | Endpoint       | Description                          |
 | ------ | -------------- | ------------------------------------ |
-| `POST` | `/auth/login`  | Sign in and receive an access token  |
+| `POST` | `/auth/login`  | Sign in and establish the session  |
 | `GET`  | `/auth/get-me` | Get the currently authenticated user |
-| `POST` | `/auth/logout` | Sign out and remove the local token  |
+| `POST` | `/auth/logout` | Sign out and clear the session  |
 
-The token is stored in `localStorage` under the `access_token` key and sent as a Bearer token by the API client.
+The frontend sends requests with `credentials: "include"` and uses the backend HttpOnly session cookie. Tokens are not stored in `localStorage`.
+
+### Role-based access control (RBAC)
+
+The frontend reads the signed-in user's permissions from `GET /auth/get-me`. When the response includes `data.permissions`, that permission list is authoritative:
+
+```json
+{
+  "success": true,
+  "message": "success",
+  "metadata": {},
+  "data": {
+    "id": "user-id",
+    "email": "user@example.com",
+    "status": true,
+    "role": "HR",
+    "permissions": ["dashboard.read", "employee.read", "employee.create"]
+  }
+}
+```
+
+The `useAuth()` hook exposes `can(permission)` to check access. The frontend uses it to show or hide sidebar links and protect pages using `*.read` permissions, gate create actions using `*.create`, and restrict exports using `employee.export` and `audit_log.export`. Data queries are not sent until authentication is restored and the required read permission is present. Users without read access see an access-restricted state.
+
+Permission keys used by the application include:
+
+```text
+dashboard.read
+user.read, user.create, user.update, user.delete
+role.read, role.create, role.update, role.delete, role.permission.assign
+department.read, department.create, department.update, department.delete
+employee.read, employee.create, employee.update, employee.delete, employee.export
+audit_log.read, audit_log.export
+```
+
+These frontend checks control the user experience only. The backend must enforce authorization on every endpoint.
+
+#### Role permission management
+
+The role management UI uses the following endpoints:
+
+| Method | Endpoint | Permission | Description |
+| ------ | -------- | ---------- | ----------- |
+| `GET` | `/permissions` | `role.read` | List the permission catalog, including database IDs |
+| `GET` | `/roles/:id/permissions` | `role.read` | List permissions currently assigned to a role |
+| `PUT` | `/roles/:id/permissions` | `role.permission.assign` | Replace all permissions assigned to a role |
+
+Permission assignment requires database IDs, not permission keys such as `employee.read`:
+
+```json
+{
+  "permission_ids": ["permission-id-1", "permission-id-2"]
+}
+```
+
+The frontend builds the checklist from `GET /permissions`, marks the role's current permissions from `GET /roles/:id/permissions`, and submits the selected IDs to the update endpoint. An empty `permission_ids` array removes every permission from the role. The built-in `ADMIN` role is protected from permission edits, updates, and deletion in the UI.
+
+See [docs/rbac.md](./docs/rbac.md) for the frontend integration guide and [docs/rbac-endpoint.md](./docs/rbac-endpoint.md) for role endpoint details.
 
 ### Dashboard
 
@@ -300,15 +357,9 @@ The frontend reads the total record count from `metadata.total_row` when availab
 
 ## Access control
 
-All API endpoints require authentication. In general:
+All API endpoints require authentication. Access is determined by permissions returned in `data.permissions` from `GET /auth/get-me`, not by role name alone. If that permission array is present, it takes precedence over the frontend's legacy role-based fallback.
 
-| Role       | Access                                                                     |
-| ---------- | -------------------------------------------------------------------------- |
-| `ADMIN`    | View data, create, update, delete, change status, export, and manage roles |
-| `HR`       | View data according to backend permissions                                 |
-| `EMPLOYEE` | View data according to backend permissions                                 |
-
-Frontend restrictions are intended for user experience only. Final authorization must always be enforced by the backend.
+Frontend restrictions improve the user experience but are not a security boundary. The backend must validate the required permission for every request.
 
 ## Testing, linting, and validation
 

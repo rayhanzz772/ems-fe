@@ -55,6 +55,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
+import { useAuth } from "@/hooks/use-auth";
 
 type Department = {
   id: string;
@@ -120,6 +121,7 @@ function getAvatarColor(name: string) {
 
 export default function DepartmentPage() {
   const queryClient = useQueryClient();
+  const { can, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
@@ -141,6 +143,7 @@ export default function DepartmentPage() {
 
   const departmentsQuery = useQuery({
     queryKey: ["departments", page, query, sortAsc],
+    enabled: !authLoading && can("department.read"),
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -182,7 +185,7 @@ export default function DepartmentPage() {
   const visibleDepartments = departments;
 
   function openCreate() {
-    if (currentUserRole !== "ADMIN") return;
+    if (!can("department.create")) return;
     setEditing(null);
     setForm({ ...emptyDepartment });
     setDeleteError("");
@@ -221,8 +224,8 @@ export default function DepartmentPage() {
   async function saveDepartment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteError("");
-    if (!editing && currentUserRole !== "ADMIN") {
-      setDeleteError("Only administrators can create departments.");
+    if (!editing && !can("department.create")) {
+      setDeleteError("You do not have permission to create departments.");
       return;
     }
     const values = {
@@ -297,6 +300,22 @@ export default function DepartmentPage() {
     }
   }
 
+  if (authLoading) return null;
+  if (!can("department.read")) {
+    return (
+      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access restricted</CardTitle>
+            <CardDescription>
+              You do not have permission to view departments.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -306,7 +325,7 @@ export default function DepartmentPage() {
             Organize your company units and team structure.
           </p>
         </div>
-        {currentUserRole === "ADMIN" && (
+        {can("department.create") && (
           <Button className="w-full sm:w-auto" onClick={openCreate}>
             <Plus /> Add department
           </Button>
@@ -357,6 +376,7 @@ export default function DepartmentPage() {
             <Table className="min-w-[760px] overflow-hidden rounded-lg border">
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="w-16">No.</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Employees</TableHead>
@@ -368,6 +388,9 @@ export default function DepartmentPage() {
                 {loading &&
                   Array.from({ length: 4 }, (_, index) => (
                     <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-8" />
+                      </TableCell>
                       <TableCell>
                         <Skeleton className="h-5 w-28" />
                       </TableCell>
@@ -382,8 +405,11 @@ export default function DepartmentPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                {visibleDepartments.map((department) => (
+                {visibleDepartments.map((department, index) => (
                   <TableRow key={department.id}>
+                    <TableCell className="text-muted-foreground">
+                      {(currentPage - 1) * pageSize + index + 1}
+                    </TableCell>
                     <TableCell>
                       <button
                         type="button"
@@ -445,7 +471,7 @@ export default function DepartmentPage() {
                 {!visibleDepartments.length && (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="h-32 text-center text-muted-foreground"
                     >
                       No departments found. Try changing your search.

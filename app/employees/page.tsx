@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -13,13 +13,7 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-import {
-  ApiError,
-  api,
-  getMe,
-  getPaginationTotal,
-  type ApiResponse,
-} from "@/lib/api";
+import { ApiError, api, getPaginationTotal, type ApiResponse } from "@/lib/api";
 import {
   Button,
   Card,
@@ -56,6 +50,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
+import { useAuth } from "@/hooks/use-auth";
 
 type Employee = {
   id: string;
@@ -111,11 +106,11 @@ function normalizeEmployee(value: EmployeeApi): Employee {
   const departmentName =
     typeof value.department === "string"
       ? value.department
-      : value.department?.name ??
+      : (value.department?.name ??
         (typeof value.department_name === "string"
           ? value.department_name
           : value.department_name?.name) ??
-        "";
+        "");
   const departmentId =
     value.department_id ??
     (typeof value.department === "object" ? value.department.id : undefined) ??
@@ -129,10 +124,12 @@ function normalizeEmployee(value: EmployeeApi): Employee {
     address:
       typeof value.address === "string"
         ? value.address
-        : value.address?.address ?? value.address?.name ?? "",
+        : (value.address?.address ?? value.address?.name ?? ""),
     department: departmentName,
     position:
-      typeof value.position === "string" ? value.position : value.position?.name ?? "",
+      typeof value.position === "string"
+        ? value.position
+        : (value.position?.name ?? ""),
   };
 }
 
@@ -230,20 +227,15 @@ export default function EmployeePage() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
   const pageSize = 5;
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    void getMe()
-      .then((user) => setCurrentUserRole(user.role))
-      .catch(() => setCurrentUserRole(null));
-  }, []);
+  const { can, loading: authLoading } = useAuth();
 
   const departmentQuery = useQuery({
     queryKey: ["employee-departments"],
+    enabled: !authLoading && can("employee.read"),
     queryFn: async () => {
       const response = await api.get<ApiResponse<DepartmentOption[]>>(
         "/employees/get-all-departments",
@@ -253,6 +245,7 @@ export default function EmployeePage() {
   });
 
   const employeeQuery = useQuery({
+    enabled: !authLoading && can("employee.read"),
     queryKey: [
       "employees",
       page,
@@ -278,9 +271,7 @@ export default function EmployeePage() {
         params.set("department_id", departmentFilter);
       if (hireDateFrom) params.set("hire_date_from", hireDateFrom);
       if (hireDateTo) params.set("hire_date_to", hireDateTo);
-      return api.get<ApiResponse<EmployeeListData>>(
-        `/employees?${params}`,
-      );
+      return api.get<ApiResponse<EmployeeListData>>(`/employees?${params}`);
     },
     placeholderData: (previousData) => previousData,
   });
@@ -341,7 +332,7 @@ export default function EmployeePage() {
   }
 
   function openCreate() {
-    if (currentUserRole !== "ADMIN") return;
+    if (!can("employee.create")) return;
     setEditing(null);
     setForm({ ...emptyForm });
     setActionError("");
@@ -384,8 +375,8 @@ export default function EmployeePage() {
   async function saveEmployee(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionError("");
-    if (!editing && currentUserRole !== "ADMIN") {
-      setActionError("Only administrators can create employees.");
+    if (!editing && !can("employee.create")) {
+      setActionError("You do not have permission to create employees.");
       return;
     }
     try {
@@ -475,6 +466,22 @@ export default function EmployeePage() {
     }
   }
 
+  if (authLoading) return null;
+  if (!can("employee.read")) {
+    return (
+      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access restricted</CardTitle>
+            <CardDescription>
+              You do not have permission to view employees.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -485,10 +492,16 @@ export default function EmployeePage() {
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Button className="w-full sm:w-auto" variant="outline" onClick={exportCsv}>
-            <Download /> Export CSV
-          </Button>
-          {currentUserRole === "ADMIN" && (
+          {can("employee.export") && (
+            <Button
+              className="w-full sm:w-auto"
+              variant="outline"
+              onClick={exportCsv}
+            >
+              <Download /> Export CSV
+            </Button>
+          )}
+          {can("employee.create") && (
             <Button className="w-full sm:w-auto" onClick={openCreate}>
               <Plus /> Add employee
             </Button>
@@ -545,6 +558,7 @@ export default function EmployeePage() {
             <Table className="min-w-[920px] overflow-hidden rounded-lg border">
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="w-16">No.</TableHead>
                   <TableHead>Employee</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Position</TableHead>
@@ -557,6 +571,9 @@ export default function EmployeePage() {
                 {loading &&
                   Array.from({ length: 4 }, (_, index) => (
                     <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-8" />
+                      </TableCell>
                       <TableCell>
                         <Skeleton className="h-5 w-28" />
                       </TableCell>
@@ -577,8 +594,11 @@ export default function EmployeePage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                {visibleEmployees.map((employee) => (
+                {visibleEmployees.map((employee, index) => (
                   <TableRow key={employee.id}>
+                    <TableCell className="text-muted-foreground">
+                      {(currentPage - 1) * pageSize + index + 1}
+                    </TableCell>
                     <TableCell>
                       <button
                         type="button"
@@ -639,7 +659,7 @@ export default function EmployeePage() {
                 {!visibleEmployees.length && (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="h-32 text-center text-muted-foreground"
                     >
                       No employees found. Try changing your search or filters.
@@ -822,11 +842,7 @@ export default function EmployeePage() {
             </div>
           </div>
           <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background px-6 py-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={clearFilters}
-            >
+            <Button type="button" variant="outline" onClick={clearFilters}>
               Reset filters
             </Button>
             <Button type="button" onClick={applyFilters}>

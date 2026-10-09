@@ -166,11 +166,7 @@ function RequestTester({
 }: OperationEntry & { doc: Document }) {
   const parameters = operation.parameters ?? [];
   const [values, setValues] = useState<Record<string, string>>({});
-  const [authorization, setAuthorization] = useState(() => {
-    if (typeof window === "undefined") return "";
-    const token = window.localStorage.getItem("access_token");
-    return token ? "Bearer " + token : "";
-  });
+  const [authorization, setAuthorization] = useState("");
   const [headers, setHeaders] = useState("{}");
   const [body, setBody] = useState(() => {
     const schema = operation.requestBody?.content?.["application/json"]?.schema;

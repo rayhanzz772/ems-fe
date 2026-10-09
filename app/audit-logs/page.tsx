@@ -48,6 +48,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
+import { useAuth } from "@/hooks/use-auth";
 
 type Action = "CREATE" | "UPDATE" | "DELETE";
 type Entity = "Employee" | "User" | "Department";
@@ -182,6 +183,7 @@ function ActionBadge({ action }: { action: Action }) {
 
 export default function AuditLogPage() {
   const queryClient = useQueryClient();
+  const { can, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
   const [action, setAction] = useState("all");
   const [entity, setEntity] = useState("all");
@@ -198,6 +200,7 @@ export default function AuditLogPage() {
   const pageSize = 5;
 
   const logsQuery = useQuery({
+    enabled: !authLoading && can("audit_log.read"),
     queryKey: [
       "audit-logs",
       page,
@@ -253,6 +256,22 @@ export default function AuditLogPage() {
   const currentPage = Math.min(page, pageCount);
   const visibleLogs = logs;
 
+  if (authLoading) return null;
+  if (!can("audit_log.read")) {
+    return (
+      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access restricted</CardTitle>
+            <CardDescription>
+              You do not have permission to view audit logs.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
+
   function resetPage() {
     setPage(1);
   }
@@ -305,13 +324,15 @@ export default function AuditLogPage() {
             Track important changes made across your organization.
           </p>
         </div>
-        <Button
-          className="w-full sm:w-auto"
-          variant="outline"
-          onClick={exportCsv}
-        >
-          <Download /> Export CSV
-        </Button>
+        {can("audit_log.export") && (
+          <Button
+            className="w-full sm:w-auto"
+            variant="outline"
+            onClick={exportCsv}
+          >
+            <Download /> Export CSV
+          </Button>
+        )}
       </section>
 
       <Card>

@@ -48,6 +48,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
+import { useAuth } from "@/hooks/use-auth";
 import {
   ApiError,
   api,
@@ -140,6 +141,7 @@ function getListData(response: ApiResponse<User[] | UserListPayload>) {
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
+  const { can, loading: authLoading } = useAuth();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -151,7 +153,6 @@ export default function UsersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [, setActionError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -161,6 +162,7 @@ export default function UsersPage() {
 
   const rolesQuery = useQuery({
     queryKey: ["available-roles"],
+    enabled: !authLoading && can("user.read"),
     queryFn: async () => {
       const response = await api.get<ApiResponse<RoleListData>>(
         "/users/get-all-roles",
@@ -173,14 +175,8 @@ export default function UsersPage() {
   });
 
   const usersQuery = useQuery({
-    queryKey: [
-      "users",
-      page,
-      query,
-      roleFilter,
-      statusFilter,
-      sortOrder,
-    ],
+    enabled: !authLoading && can("user.read"),
+    queryKey: ["users", page, query, roleFilter, statusFilter, sortOrder],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -217,12 +213,10 @@ export default function UsersPage() {
         .then((user) => {
           setCurrentUserId(user.id);
           setCurrentUserEmail(user.email.toLowerCase());
-          setCurrentUserRole(user.role);
         })
         .catch(() => {
           setCurrentUserId(null);
           setCurrentUserEmail(null);
-          setCurrentUserRole(null);
         });
     }, 0);
 
@@ -238,7 +232,7 @@ export default function UsersPage() {
   }
 
   function openCreate() {
-    if (currentUserRole !== "ADMIN") return;
+    if (!can("user.create")) return;
     setEditing(null);
     setForm({
       ...emptyForm,
@@ -263,8 +257,8 @@ export default function UsersPage() {
   async function saveUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setActionError("");
-    if (!editing && currentUserRole !== "ADMIN") {
-      setActionError("Only administrators can create users.");
+    if (!editing && !can("user.create")) {
+      setActionError("You do not have permission to create users.");
       return;
     }
     try {
@@ -348,6 +342,22 @@ export default function UsersPage() {
     }
   }
 
+  if (authLoading) return null;
+  if (!can("user.read")) {
+    return (
+      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access restricted</CardTitle>
+            <CardDescription>
+              You do not have permission to view users.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -357,7 +367,7 @@ export default function UsersPage() {
             Manage login accounts, roles, and access status.
           </p>
         </div>
-        {currentUserRole === "ADMIN" && (
+        {can("user.create") && (
           <Button className="w-full sm:w-auto" onClick={openCreate}>
             <Plus /> Add user
           </Button>
@@ -403,6 +413,7 @@ export default function UsersPage() {
             <Table className="min-w-[920px] overflow-hidden rounded-lg border">
               <TableHeader>
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableHead className="w-16">No.</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
@@ -413,6 +424,9 @@ export default function UsersPage() {
                 {loading &&
                   Array.from({ length: 4 }, (_, index) => (
                     <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-8" />
+                      </TableCell>
                       <TableCell>
                         <Skeleton className="h-5 w-28" />
                       </TableCell>
@@ -428,13 +442,16 @@ export default function UsersPage() {
                     </TableRow>
                   ))}
                 {!loading &&
-                  users.map((user) => {
+                  users.map((user, index) => {
                     const isCurrentUser =
                       user.id === currentUserId ||
                       user.email.toLowerCase() === currentUserEmail;
 
                     return (
                       <TableRow key={user.id}>
+                        <TableCell className="text-muted-foreground">
+                          {(currentPage - 1) * pageSize + index + 1}
+                        </TableCell>
                         <TableCell>
                           <button
                             type="button"
@@ -504,7 +521,7 @@ export default function UsersPage() {
                 {!loading && !users.length && (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="h-32 text-center text-muted-foreground"
                     >
                       No users found. Try changing your search or filters.
@@ -581,15 +598,42 @@ export default function UsersPage() {
           </DialogHeader>
           <div className="grid gap-4">
             <div className="space-y-2">
-              <label htmlFor="user-role-filter" className="text-sm font-medium">Role</label>
-              <select id="user-role-filter" value={roleFilter} onChange={(event) => { setRoleFilter(event.target.value); setPage(1); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+              <label htmlFor="user-role-filter" className="text-sm font-medium">
+                Role
+              </label>
+              <select
+                id="user-role-filter"
+                value={roleFilter}
+                onChange={(event) => {
+                  setRoleFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
                 <option value="all">All roles</option>
-                {availableRoles.map((role) => <option key={role} value={role}>{role}</option>)}
+                {availableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">
-              <label htmlFor="user-status-filter" className="text-sm font-medium">Status</label>
-              <select id="user-status-filter" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+              <label
+                htmlFor="user-status-filter"
+                className="text-sm font-medium"
+              >
+                Status
+              </label>
+              <select
+                id="user-status-filter"
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
                 <option value="all">All status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -597,14 +641,32 @@ export default function UsersPage() {
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-medium">Sort by email</span>
-              <Button type="button" variant="outline" onClick={() => setSortAsc((value) => !value)}>
-                {sortAsc ? <ArrowDown /> : <ArrowUp />} {sortAsc ? "Ascending" : "Descending"}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSortAsc((value) => !value)}
+              >
+                {sortAsc ? <ArrowDown /> : <ArrowUp />}{" "}
+                {sortAsc ? "Ascending" : "Descending"}
               </Button>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => { setRoleFilter("all"); setStatusFilter("all"); setSortAsc(true); setPage(1); }}>Reset filters</Button>
-            <DialogClose render={<Button type="button" />}>Apply filters</DialogClose>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRoleFilter("all");
+                setStatusFilter("all");
+                setSortAsc(true);
+                setPage(1);
+              }}
+            >
+              Reset filters
+            </Button>
+            <DialogClose render={<Button type="button" />}>
+              Apply filters
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>

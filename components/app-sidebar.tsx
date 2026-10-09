@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   UsersRound,
@@ -28,7 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarLogo } from "@/components/sidebar-logo";
-import { getMe, type AuthUser } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -36,7 +35,7 @@ type NavItem = {
   href: string;
   icon: LucideIcon;
   badge?: string;
-  adminOnly?: boolean;
+  permission?: string;
 };
 
 type NavSection = {
@@ -52,6 +51,7 @@ const navSections: NavSection[] = [
         title: "Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
+        permission: "dashboard.read",
       },
     ],
   },
@@ -62,23 +62,25 @@ const navSections: NavSection[] = [
         title: "Users",
         href: "/users",
         icon: UsersRound,
-        adminOnly: true,
+        permission: "user.read",
       },
       {
         title: "Roles",
         href: "/roles",
         icon: KeyRound,
-        adminOnly: true,
+        permission: "role.read",
       },
       {
         title: "Departments",
         href: "/departments",
         icon: UserGroup,
+        permission: "department.read",
       },
       {
         title: "Employees",
         href: "/employees",
         icon: IdCardLanyard,
+        permission: "employee.read",
       },
     ],
   },
@@ -89,6 +91,7 @@ const navSections: NavSection[] = [
         title: "Audit Log",
         href: "/audit-logs",
         icon: ClipboardMinus,
+        permission: "audit_log.read",
       },
       {
         title: "API Documentation",
@@ -102,8 +105,7 @@ const navSections: NavSection[] = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, loading: isLoading, can } = useAuth();
 
   const isWorkspaceRoute =
     pathname.startsWith("/dashboard") ||
@@ -114,35 +116,10 @@ export function AppSidebar() {
     pathname.startsWith("/api-documentation") ||
     pathname.startsWith("/roles");
 
-  useEffect(() => {
-    if (!isWorkspaceRoute) return;
-    let cancelled = false;
-    setIsLoading(true);
-    void getMe()
-      .then((data) => {
-        if (!cancelled) {
-          setUser(data);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setUser(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isWorkspaceRoute]);
-
   if (!isWorkspaceRoute) return null;
-
-  const isAdmin = user?.role === "ADMIN";
-  const userInitials = user?.email ? user.email.slice(0, 2).toUpperCase() : "ME";
+  const userInitials = user?.email
+    ? user.email.slice(0, 2).toUpperCase()
+    : "ME";
   const userDisplayName = user?.email ? user.email.split("@")[0] : "User";
 
   const isItemActive = (href: string) => {
@@ -209,7 +186,7 @@ export function AppSidebar() {
         ) : (
           navSections.map((section) => {
             const visibleItems = section.items.filter(
-              (item) => !item.adminOnly || isAdmin
+              (item) => !item.permission || can(item.permission),
             );
 
             if (visibleItems.length === 0) return null;
@@ -232,7 +209,7 @@ export function AppSidebar() {
                           tooltip={item.title}
                           className={cn(
                             "relative group/btn transition-all duration-150",
-                            active && "font-semibold"
+                            active && "font-semibold",
                           )}
                         >
                           <Icon
@@ -241,7 +218,7 @@ export function AppSidebar() {
                               "size-4 shrink-0 transition-all duration-150 group-hover/btn:scale-105",
                               active
                                 ? "text-primary-foreground"
-                                : "text-muted-foreground group-hover/btn:text-foreground"
+                                : "text-muted-foreground group-hover/btn:text-foreground",
                             )}
                           />
                           <span className="flex-1 truncate">{item.title}</span>
@@ -260,7 +237,7 @@ export function AppSidebar() {
                               "transition-colors",
                               active
                                 ? "bg-primary-foreground/20"
-                                : "bg-muted text-muted-foreground border border-border/50"
+                                : "bg-muted text-muted-foreground border border-border/50",
                             )}
                           >
                             {item.badge}
@@ -304,7 +281,7 @@ export function AppSidebar() {
                         "rounded px-1.5 py-0.2 text-[9px] font-bold tracking-wide uppercase",
                         user.role === "ADMIN"
                           ? "bg-primary/10 text-primary ring-1 ring-primary/20"
-                          : "bg-muted text-muted-foreground ring-1 ring-border"
+                          : "bg-muted text-muted-foreground ring-1 ring-border",
                       )}
                     >
                       {user.role}

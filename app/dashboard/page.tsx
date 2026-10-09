@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -34,7 +33,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui";
-import { ApiError, getDashboard, getMe, type DashboardData } from "@/lib/api";
+import { ApiError, getDashboard, type DashboardData } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 
 const departmentConfig = {
   employees: { label: "Employees", color: "var(--chart-1)" },
@@ -91,17 +91,28 @@ function getActivityVisual(action: string) {
 }
 
 export default function DashboardPage() {
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const { can, loading: authLoading } = useAuth();
   const dashboardQuery = useQuery<DashboardData>({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
+    enabled: !authLoading && can("dashboard.read"),
   });
 
-  useEffect(() => {
-    void getMe()
-      .then((user) => setCurrentUserRole(user.role))
-      .catch(() => setCurrentUserRole(null));
-  }, []);
+  if (authLoading) return null;
+  if (!can("dashboard.read")) {
+    return (
+      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access restricted</CardTitle>
+            <CardDescription>
+              You do not have permission to view the dashboard.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
 
   const dashboard = dashboardQuery.data;
   const error =
@@ -214,15 +225,17 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          <Button
-            nativeButton={false}
-            variant="outline"
-            className="w-full sm:w-auto"
-            render={<Link href="/audit-logs" />}
-          >
-            <Activity /> View activity
-          </Button>
-          {currentUserRole === "ADMIN" && (
+          {can("audit_log.read") && (
+            <Button
+              nativeButton={false}
+              variant="outline"
+              className="w-full sm:w-auto"
+              render={<Link href="/audit-logs" />}
+            >
+              <Activity /> View activity
+            </Button>
+          )}
+          {can("employee.create") && (
             <Button
               className="w-full sm:w-auto"
               nativeButton={false}

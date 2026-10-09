@@ -22,9 +22,6 @@ export function AuthScreen({ mode }: AuthScreenProps) {
   useEffect(() => {
     if (isRegister) return;
 
-    const accessToken = window.localStorage.getItem("access_token");
-    if (!accessToken) return;
-
     let cancelled = false;
 
     void getMe()
@@ -32,9 +29,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
         if (!cancelled) router.replace("/dashboard");
       })
       .catch(() => {
-        if (!cancelled) {
-          window.localStorage.removeItem("access_token");
-        }
+        // A missing session is the expected state on the login screen.
       });
 
     return () => {

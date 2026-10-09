@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button, Card, Input, Label, Spinner } from "@/components/ui";
-import { ApiError, getMe, login } from "@/lib/api";
+import { ApiError, login } from "@/lib/api";
 import { showError, showSuccess } from "@/lib/toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -16,29 +16,17 @@ type AuthScreenProps = {
 export function AuthScreen({ mode }: AuthScreenProps) {
   const isRegister = mode === "register";
   const router = useRouter();
-  const { refresh: refreshAuth } = useAuth();
+  const { user, loading: authLoading, refresh: refreshAuth } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    if (isRegister) return;
-
-    let cancelled = false;
-
-    void getMe()
-      .then(() => {
-        if (!cancelled) router.replace("/dashboard");
-      })
-      .catch(() => {
-        // A missing session is the expected state on the login screen.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isRegister, router]);
+    if (!isRegister && !authLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, isRegister, router, user]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
+const API_PROXY_URL = "/api/backend";
 
 export class ApiError extends Error {
   status: number;
@@ -16,15 +16,13 @@ export async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not configured.");
-
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${API_PROXY_URL}${path}`, {
     ...options,
     headers,
     credentials: "include",

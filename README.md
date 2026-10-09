@@ -118,6 +118,15 @@ NEXT_PUBLIC_API_DOCS_URL=http://localhost:8000/api-docs/openapi.json
 | `NEXT_PUBLIC_API_URL`      | Backend API base URL without a trailing slash       |
 | `NEXT_PUBLIC_API_DOCS_URL` | OpenAPI JSON URL used by the API Documentation page |
 
+For the Railway production API, use the HTTPS hostname without `:8000`:
+
+```env
+NEXT_PUBLIC_API_URL=https://ems-be-production-a18c.up.railway.app/api/v1
+NEXT_PUBLIC_API_DOCS_URL=https://ems-be-production-a18c.up.railway.app/api-docs/openapi.json
+```
+
+Port `8000` is for local backend development; Railway's public HTTPS endpoint uses the standard HTTPS port. Set the matching values in Vercel's Environment Variables for each target environment, then redeploy so the application and API proxy use the corrected destination.
+
 Do not commit secrets, access tokens, or production credentials to `.env.local`.
 
 ### 4. Run the development server

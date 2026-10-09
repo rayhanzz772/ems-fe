@@ -31,13 +31,11 @@ Frontend for the Employee Management System (EMS), built with Next.js, React, Ty
 
 ## Responsive design
 
-<table>
-  <tr>
-    <td><img src="./public/assets/images/prev1.png" alt="Preview 1" width="100%"></td>
-    <td><img src="./public/assets/images/prev2.png" alt="Preview 2" width="100%"></td>
-    <td><img src="./public/assets/images/prev3.png" alt="Preview 3" width="100%"></td>
-  </tr>
-</table>
+<div style="display: flex; gap: 12px;">
+  <img src="./public/assets/images/prev1.png" alt="Preview 1" width="50%">
+  <img src="./public/assets/images/prev2.png" alt="Preview 2" width="50%">
+  <img src="./public/assets/images/prev3.png" alt="Preview 3" width="50%">
+</div>
 
 ## Tech stack
 

@@ -12,7 +12,7 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
       href="/dashboard"
       aria-label="Morrow home"
       className={cn(
-        "group/logo flex w-full items-center gap-3 rounded-lg px-2 py-1.5",
+        "group/logo flex w-full items-center gap-3 rounded-lg py-1.5",
         className,
       )}
     >

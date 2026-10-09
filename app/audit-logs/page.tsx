@@ -34,6 +34,7 @@ import {
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -254,6 +255,10 @@ export default function AuditLogPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
+  const paginationPages =
+    pageCount <= 4
+      ? Array.from({ length: pageCount }, (_, index) => index + 1)
+      : [1, 2, "ellipsis", pageCount - 1, pageCount] as const;
   const visibleLogs = logs;
 
   if (authLoading) return null;
@@ -492,8 +497,12 @@ export default function AuditLogPage() {
                     }
                   />
                 </PaginationItem>
-                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-                  (item) => (
+                {paginationPages.map((item, index) =>
+                  item === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
                     <PaginationItem key={item}>
                       <PaginationLink
                         href="#"

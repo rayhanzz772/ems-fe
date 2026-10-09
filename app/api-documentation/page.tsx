@@ -509,14 +509,14 @@ export default function ApiDocsPage() {
                   className="pl-9"
                 />
               </div>
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Button
                   type="button"
                   variant="outline"
                   aria-label="Filter by HTTP method"
                   aria-expanded={methodMenuOpen}
                   onClick={() => setMethodMenuOpen((open) => !open)}
-                  className="min-w-36 justify-between"
+                  className="w-full min-w-36 justify-center gap-2 sm:w-auto"
                 >
                   {methodFilter === "all"
                     ? "All methods"

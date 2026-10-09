@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Button, Card, Input, Label } from "@/components/ui";
+import { Button, Card, Input, Label, Spinner } from "@/components/ui";
 import { ApiError, getMe, login } from "@/lib/api";
 import { showError, showSuccess } from "@/lib/toast";
 
@@ -18,6 +18,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
     if (isRegister) return;
@@ -49,9 +50,12 @@ export function AuthScreen({ mode }: AuthScreenProps) {
           String(formData.get("email") ?? ""),
           String(formData.get("password") ?? ""),
         );
+        setIsRedirecting(true);
         showSuccess("Signed in", "Welcome back to your account.");
-        router.push("/dashboard");
+        await new Promise((resolve) => window.setTimeout(resolve, 600));
+        router.replace("/dashboard");
       } catch (error) {
+        setIsRedirecting(false);
         setMessage(
           error instanceof ApiError
             ? error.message
@@ -68,6 +72,26 @@ export function AuthScreen({ mode }: AuthScreenProps) {
     }
 
     setMessage("Your account form is ready to connect to an auth provider.");
+  }
+
+  if (isRedirecting) {
+    return (
+      <main
+        className="flex min-h-[calc(100svh-4rem)] items-center justify-center bg-background px-5 text-foreground"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="flex flex-col items-center gap-4 text-center">
+          <Spinner className="size-8 text-primary" />
+          <div className="space-y-1">
+            <h1 className="text-lg font-semibold">Signed in successfully</h1>
+            <p className="text-sm text-muted-foreground">
+              Preparing your dashboard...
+            </p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (

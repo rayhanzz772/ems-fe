@@ -61,6 +61,13 @@ const methodColors: Record<string, string> = {
   options: "bg-muted text-muted-foreground",
 };
 
+function normalizeAuthorization(value: string) {
+  const authorization = value.trim();
+  if (!authorization || /^Bearer(?:\s|$)/i.test(authorization))
+    return authorization;
+  return "Bearer " + authorization;
+}
+
 function resolveSchema(schema: Schema | undefined, doc: Document) {
   if (!schema?.$ref) return schema;
   return (
@@ -205,6 +212,12 @@ function RequestTester({
         if (parameter.in === "header")
           requestHeaders.set(parameter.name, value);
       });
+      const authorizationHeader = requestHeaders.get("Authorization");
+      if (authorizationHeader)
+        requestHeaders.set(
+          "Authorization",
+          normalizeAuthorization(authorizationHeader),
+        );
       if (query.size) requestPath += `?${query.toString()}`;
 
       const url = `${doc.servers?.[0]?.url ?? window.location.origin}${requestPath}`;
@@ -272,9 +285,12 @@ function RequestTester({
             type="text"
             value={authorization}
             onChange={(event) => setAuthorization(event.target.value)}
-            placeholder="Authorization: Bearer token"
+            placeholder="Token or Bearer token"
             aria-label="Authorization header"
           />
+          <p className="text-xs text-muted-foreground">
+            The Bearer prefix is added automatically if it is missing.
+          </p>
           <Textarea
             value={headers}
             onChange={(event) => setHeaders(event.target.value)}

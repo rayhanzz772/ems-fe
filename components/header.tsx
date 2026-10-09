@@ -8,17 +8,16 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button, AnimatedThemeToggler } from "@/components/ui";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ApiError, getMe, logout } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import { showError, showSuccess } from "@/lib/toast";
 
 export function Header() {
   const { resolvedTheme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading: authLoading, logout } = useAuth();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userLoadError, setUserLoadError] = useState<string | null>(null);
 
   const showSidebar =
     pathname === "/dashboard" ||
@@ -29,45 +28,6 @@ export function Header() {
     pathname === "/api-documentation" ||
     pathname === "/roles";
   const showLogo = pathname === "/login" || pathname === "/register";
-
-  useEffect(() => {
-    if (!showSidebar) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadCurrentUser() {
-      try {
-        const user = await getMe();
-        if (!cancelled) {
-          setUserEmail(user.email);
-          setUserLoadError(null);
-        }
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        if (error instanceof ApiError && error.status === 401) {
-          router.replace("/login");
-          return;
-        }
-
-        setUserLoadError(
-          error instanceof Error
-            ? error.message
-            : "Unable to load the current user.",
-        );
-      }
-    }
-
-    void loadCurrentUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router, showSidebar]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -95,8 +55,10 @@ export function Header() {
     }
   };
 
-  const userInitials = userEmail ? userEmail.slice(0, 2).toUpperCase() : "--";
-  const userLabel = userEmail ?? (userLoadError ? "Unavailable" : "Loading...");
+  const userInitials = user?.email
+    ? user.email.slice(0, 2).toUpperCase()
+    : "--";
+  const userLabel = user?.email ?? (authLoading ? "Loading..." : "Unavailable");
   const breadcrumb = {
     "/dashboard": { section: "Overview", label: "Dashboard" },
     "/users": { section: "Management", label: "Users" },
@@ -156,7 +118,7 @@ export function Header() {
                 onClick={() => setMenuOpen((open) => !open)}
                 className="flex items-center gap-2 rounded-full px-2 py-1.5 shadow-none"
                 aria-label="Open user menu"
-                title={userLoadError ?? "Open user menu"}
+                title="Open user menu"
               >
                 <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                   {userInitials}

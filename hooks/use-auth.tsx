@@ -1,6 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { getMe, logout as apiLogout, type AuthUser } from "@/lib/api";
 import { canPermission, getPermissions } from "@/lib/rbac";
 
@@ -18,20 +27,31 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const requestId = useRef(0);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
+    const currentRequestId = ++requestId.current;
+    setLoading(true);
     try {
-      setUser(await getMe());
+      const currentUser = await getMe();
+      if (currentRequestId === requestId.current) setUser(currentUser);
     } catch {
-      setUser(null);
+      if (currentRequestId === requestId.current) setUser(null);
     } finally {
-      setLoading(false);
+      if (currentRequestId === requestId.current) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const handle = window.setTimeout(() => void refresh(), 0);
     return () => window.clearTimeout(handle);
+  }, [refresh]);
+
+  const logout = useCallback(async () => {
+    requestId.current += 1;
+    setUser(null);
+    setLoading(false);
+    await apiLogout();
   }, []);
 
   const value = useMemo(
@@ -41,12 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       can: (permission: string) => canPermission(user, permission),
       refresh,
-      logout: async () => {
-        await apiLogout();
-        setUser(null);
-      },
+      logout,
     }),
-    [loading, user],
+    [loading, logout, refresh, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -7,6 +7,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button, Card, Input, Label, Spinner } from "@/components/ui";
 import { ApiError, getMe, login } from "@/lib/api";
 import { showError, showSuccess } from "@/lib/toast";
+import { useAuth } from "@/hooks/use-auth";
 
 type AuthScreenProps = {
   mode: "login" | "register";
@@ -15,6 +16,7 @@ type AuthScreenProps = {
 export function AuthScreen({ mode }: AuthScreenProps) {
   const isRegister = mode === "register";
   const router = useRouter();
+  const { refresh: refreshAuth } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +52,7 @@ export function AuthScreen({ mode }: AuthScreenProps) {
           String(formData.get("email") ?? ""),
           String(formData.get("password") ?? ""),
         );
+        await refreshAuth();
         setIsRedirecting(true);
         showSuccess("Signed in", "Welcome back to your account.");
         await new Promise((resolve) => window.setTimeout(resolve, 600));

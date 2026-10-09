@@ -191,7 +191,7 @@ export function AppSidebar() {
 
                         {active && !item.badge && (
                           <span
-                            className="ml-auto size-1.5 rounded-full bg-primary-foreground/9  0 shrink-0 group-data-[collapsible=icon]:hidden shadow-xs"
+                            className="ml-auto size-1.5 rounded-full bg-primary-foreground/90 shrink-0 group-data-[collapsible=icon]:hidden shadow-xs"
                             aria-hidden="true"
                           />
                         )}

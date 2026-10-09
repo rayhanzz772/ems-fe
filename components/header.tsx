@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown, ChevronRight, LogOut, Moon, Sun } from "lucide-react";
+import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
-import { Button } from "@/components/ui";
+import { Button, AnimatedThemeToggler } from "@/components/ui";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ApiError, getMe, logout } from "@/lib/api";
 import { showError, showSuccess } from "@/lib/toast";
@@ -142,20 +142,11 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            onClick={() =>
-              setTheme(resolvedTheme === "dark" ? "light" : "dark")
-            }
-            variant="outline"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Toggle color theme"
-            title="Toggle color theme"
-          >
-            <Sun aria-hidden="true" className="hidden size-4 dark:block" />
-            <Moon aria-hidden="true" className="size-4 dark:hidden" />
-          </Button>
+          <AnimatedThemeToggler
+            theme={resolvedTheme === "dark" ? "dark" : "light"}
+            onThemeChange={(newTheme) => setTheme(newTheme)}
+            variant="circle"
+          />
 
           {showSidebar && (
             <div ref={menuRef} className="relative">

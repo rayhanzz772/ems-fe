@@ -34,3 +34,4 @@ export { Textarea } from "./textarea";
 export { Switch } from "./switch";
 export { Spinner } from "./spinner";
 export { Skeleton } from "./skeleton";
+export { AnimatedThemeToggler } from "./animated-theme-toggler";

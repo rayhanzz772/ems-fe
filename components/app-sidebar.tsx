@@ -132,7 +132,21 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-16 shrink-0 border-b border-sidebar-border/50 px-3 flex items-center justify-center">
-        <SidebarLogo />
+        {isLoading ? (
+          <div
+            className="flex w-full items-center gap-3 py-1.5"
+            role="status"
+            aria-label="Loading application identity"
+          >
+            <Skeleton className="size-8 shrink-0 rounded-md" />
+            <div className="flex min-w-0 flex-col gap-1.5 group-data-[collapsible=icon]:hidden">
+              <Skeleton className="h-3.5 w-16" />
+              <Skeleton className="h-2.5 w-32" />
+            </div>
+          </div>
+        ) : (
+          <SidebarLogo />
+        )}
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-3 gap-4">

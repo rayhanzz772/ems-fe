@@ -6,7 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
-import { Button, AnimatedThemeToggler, Spinner } from "@/components/ui";
+import {
+  Button,
+  AnimatedThemeToggler,
+  Skeleton,
+  Spinner,
+} from "@/components/ui";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { showError, showSuccess } from "@/lib/toast";
@@ -81,7 +86,21 @@ export function Header() {
         <div className="mx-auto flex h-full w-full items-center justify-between px-5">
           <div className="flex items-center gap-2">
             {showSidebar && <SidebarTrigger title="Toggle navigation" />}
-            {showSidebar && breadcrumb && (
+            {showSidebar && breadcrumb && authLoading && (
+              <div
+                className="hidden items-center gap-2 sm:flex"
+                role="status"
+                aria-label="Loading breadcrumb"
+              >
+                <Skeleton className="h-4 w-20" />
+                <ChevronRight
+                  aria-hidden="true"
+                  className="size-4 text-muted-foreground"
+                />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            )}
+            {showSidebar && breadcrumb && !authLoading && (
               <nav
                 aria-label="Breadcrumb"
                 className="hidden items-center gap-1 text-sm sm:flex"
@@ -117,50 +136,61 @@ export function Header() {
               variant="circle"
             />
 
-            {showSidebar && (
-              <div ref={menuRef} className="relative">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setMenuOpen((open) => !open)}
-                  className="flex items-center gap-2 rounded-full px-2 py-1.5 shadow-none"
-                  aria-label="Open user menu"
-                  title="Open user menu"
+            {showSidebar &&
+              (authLoading ? (
+                <div
+                  className="flex h-10 items-center gap-2 rounded-full border px-2"
+                  role="status"
+                  aria-label="Loading account information"
                 >
-                  <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    {userInitials}
-                  </div>
-                  <span className="hidden text-sm font-medium text-foreground sm:inline">
-                    {userLabel}
-                  </span>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className={`size-4 text-muted-foreground transition-transform ${
-                      menuOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </Button>
+                  <Skeleton className="size-8 rounded-full" />
+                  <Skeleton className="hidden h-4 w-28 sm:block" />
+                  <Skeleton className="size-4 rounded-sm" />
+                </div>
+              ) : (
+                <div ref={menuRef} className="relative">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setMenuOpen((open) => !open)}
+                    className="flex items-center gap-2 rounded-full px-2 py-1.5 shadow-none"
+                    aria-label="Open user menu"
+                    title="Open user menu"
+                  >
+                    <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                      {userInitials}
+                    </div>
+                    <span className="hidden text-sm font-medium text-foreground sm:inline">
+                      {userLabel}
+                    </span>
+                    <ChevronDown
+                      aria-hidden="true"
+                      className={`size-4 text-muted-foreground transition-transform ${
+                        menuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
 
-                {menuOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-border bg-popover p-1 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      disabled={loggingOut}
-                      aria-busy={loggingOut}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition hover:bg-muted disabled:cursor-wait disabled:opacity-70"
-                    >
-                      {loggingOut ? (
-                        <Spinner className="size-4" />
-                      ) : (
-                        <LogOut className="size-4" aria-hidden="true" />
-                      )}
-                      {loggingOut ? "Signing out..." : "Logout"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  {menuOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-border bg-popover p-1 shadow-lg">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                        aria-busy={loggingOut}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition hover:bg-muted disabled:cursor-wait disabled:opacity-70"
+                      >
+                        {loggingOut ? (
+                          <Spinner className="size-4" />
+                        ) : (
+                          <LogOut className="size-4" aria-hidden="true" />
+                        )}
+                        {loggingOut ? "Signing out..." : "Logout"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         </div>
       </header>

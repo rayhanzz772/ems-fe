@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Building2,
+  BriefcaseBusiness,
   UsersRound,
   UserGroup,
   IdCardLanyard,
@@ -71,10 +73,22 @@ const navSections: NavSection[] = [
         permission: "role.read",
       },
       {
+        title: "Branches",
+        href: "/branches",
+        icon: Building2,
+        permission: "branch.read",
+      },
+      {
         title: "Departments",
         href: "/departments",
         icon: UserGroup,
         permission: "department.read",
+      },
+      {
+        title: "Positions",
+        href: "/positions",
+        icon: BriefcaseBusiness,
+        permission: "position.read",
       },
       {
         title: "Employees",
@@ -111,6 +125,8 @@ export function AppSidebar() {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/users") ||
     pathname.startsWith("/departments") ||
+    pathname.startsWith("/branches") ||
+    pathname.startsWith("/positions") ||
     pathname.startsWith("/employees") ||
     pathname.startsWith("/audit-logs") ||
     pathname.startsWith("/api-documentation") ||
@@ -176,6 +192,9 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuSkeleton showIcon width="70%" />
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuSkeleton showIcon width="60%" />
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuSkeleton showIcon width="60%" />

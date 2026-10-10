@@ -4,6 +4,8 @@ export const PERMISSIONS = [
   "dashboard.read", "user.read", "user.create", "user.update", "user.delete",
   "role.read", "role.create", "role.update", "role.delete", "role.permission.assign",
   "department.read", "department.create", "department.update", "department.delete",
+  "branch.read", "branch.create", "branch.update", "branch.delete",
+  "position.read", "position.create", "position.update", "position.delete",
   "employee.read", "employee.create", "employee.update", "employee.delete", "employee.export",
   "audit_log.read", "audit_log.export",
 ] as const;

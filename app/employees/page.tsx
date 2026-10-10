@@ -62,35 +62,98 @@ type Employee = {
   phone_number: string;
   department_id: string;
   department: string;
+  position_id: string;
   position: string;
+  branch_id: string;
+  branch: string;
+  manager_id: string;
+  manager: string;
+  employment_type: EmploymentType;
+  employment_status: EmploymentStatus;
+  contract_start_date: string;
+  contract_end_date: string;
   hire_date: string;
   address: string;
   status: boolean;
 };
 
-type EmployeeForm = Omit<Employee, "id" | "employee_code" | "department">;
-type DepartmentOption = {
+type EmploymentType = "PERMANENT" | "CONTRACT" | "INTERN";
+type EmploymentStatus = "ACTIVE" | "ON_LEAVE" | "RESIGNED" | "TERMINATED";
+
+type EmployeeForm = {
+  employee_code: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  department_id: string;
+  position_id: string;
+  branch_id: string;
+  manager_id: string;
+  employment_type: EmploymentType;
+  employment_status: EmploymentStatus;
+  contract_start_date: string;
+  contract_end_date: string;
+  hire_date: string;
+  address: string;
+  status: boolean;
+};
+
+type NamedOption = {
   id: string;
   name: string;
 };
 
-const positions = [
-  "Product Designer",
-  "Frontend Engineer",
-  "HR Specialist",
-  "Finance Analyst",
-  "Product Manager",
-];
+type PositionOption = NamedOption;
+type BranchOption = NamedOption;
+type PositionOptionListData =
+  | PositionOption[]
+  | {
+      items?: PositionOption[];
+      results?: PositionOption[];
+      positions?: PositionOption[];
+    };
+type BranchOptionListData =
+  | BranchOption[]
+  | {
+      items?: BranchOption[];
+      results?: BranchOption[];
+      branches?: BranchOption[];
+    };
 
-type EmployeeApi = Omit<
-  Employee,
-  "id" | "department" | "position" | "address"
-> & {
+type EmployeeApi = {
   id: string | number;
-  department?: string | { id?: string | number; name?: string };
-  department_name?: string | { name?: string };
-  position?: string | { name?: string };
-  address?: string | { name?: string; address?: string };
+  employee_code?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone_number?: string | null;
+  department_id?: string | number | null;
+  department_name?: string | null;
+  department?: string | { id?: string | number; name?: string } | null;
+  position_id?: string | number | null;
+  position?: string | { id?: string | number; name?: string } | null;
+  branch_id?: string | number | null;
+  branch_name?: string | null;
+  branch?: string | { id?: string | number; name?: string } | null;
+  manager_id?: string | number | null;
+  manager_first_name?: string | null;
+  manager_last_name?: string | null;
+  manager?: {
+    id?: string | number;
+    employee_code?: string;
+    first_name?: string;
+    last_name?: string;
+  } | null;
+  employment_type?: EmploymentType;
+  employment_status?: EmploymentStatus;
+  contract_start_date?: string | null;
+  contract_end_date?: string | null;
+  hire_date?: string;
+  address?: string | null;
+  status?: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type EmployeeListData =
@@ -107,30 +170,58 @@ function normalizeEmployee(value: EmployeeApi): Employee {
   const departmentName =
     typeof value.department === "string"
       ? value.department
-      : (value.department?.name ??
-        (typeof value.department_name === "string"
-          ? value.department_name
-          : value.department_name?.name) ??
-        "");
+      : (value.department?.name ?? value.department_name ?? "");
   const departmentId =
     value.department_id ??
-    (typeof value.department === "object" ? value.department.id : undefined) ??
+    (typeof value.department === "object" ? value.department?.id : undefined) ??
     "";
+  const positionName =
+    typeof value.position === "string"
+      ? value.position
+      : (value.position?.name ?? "");
+  const positionId =
+    value.position_id ??
+    (typeof value.position === "object" ? value.position?.id : undefined) ??
+    "";
+  const branchName =
+    typeof value.branch === "string"
+      ? value.branch
+      : (value.branch?.name ?? value.branch_name ?? "");
+  const branchId =
+    value.branch_id ??
+    (typeof value.branch === "object" ? value.branch?.id : undefined) ??
+    "";
+  const managerName =
+    value.manager?.first_name || value.manager_first_name
+      ? `${value.manager?.first_name ?? value.manager_first_name ?? ""} ${value.manager?.last_name ?? value.manager_last_name ?? ""}`.trim()
+      : "";
 
   return {
-    ...value,
     id: String(value.id),
-    department_id: String(departmentId),
+    employee_code: value.employee_code ?? "",
+    first_name: value.first_name ?? "",
+    last_name: value.last_name ?? "",
+    email: value.email ?? "",
     phone_number: value.phone_number ?? "",
-    address:
-      typeof value.address === "string"
-        ? value.address
-        : (value.address?.address ?? value.address?.name ?? ""),
+    department_id: String(departmentId),
     department: departmentName,
-    position:
-      typeof value.position === "string"
-        ? value.position
-        : (value.position?.name ?? ""),
+    position_id: String(positionId),
+    position: positionName,
+    branch_id: String(branchId),
+    branch: branchName,
+    manager_id: String(
+      value.manager_id ??
+        (typeof value.manager === "object" ? value.manager?.id : undefined) ??
+        "",
+    ),
+    manager: managerName,
+    employment_type: value.employment_type ?? "PERMANENT",
+    employment_status: value.employment_status ?? "ACTIVE",
+    contract_start_date: value.contract_start_date ?? "",
+    contract_end_date: value.contract_end_date ?? "",
+    hire_date: value.hire_date ?? "",
+    address: value.address ?? "",
+    status: value.status ?? true,
   };
 }
 
@@ -139,8 +230,15 @@ const emptyForm: EmployeeForm = {
   last_name: "",
   email: "",
   phone_number: "",
+  employee_code: "",
   department_id: "",
-  position: "",
+  position_id: "",
+  branch_id: "",
+  manager_id: "",
+  employment_type: "PERMANENT",
+  employment_status: "ACTIVE",
+  contract_start_date: "",
+  contract_end_date: "",
   hire_date: "",
   address: "",
   status: true,
@@ -183,6 +281,10 @@ function formatDate(date: string) {
   }).format(parsedDate);
 }
 
+function dateInputValue(date: string) {
+  return date ? date.slice(0, 10) : "";
+}
+
 function StatusBadge({ active }: { active: boolean }) {
   return (
     <span
@@ -219,8 +321,13 @@ export default function EmployeePage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("first_name");
-  const [sortAsc, setSortAsc] = useState(true);
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [managerFilter, setManagerFilter] = useState("all");
+  const [positionFilter, setPositionFilter] = useState("");
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState("all");
+  const [employmentStatusFilter, setEmploymentStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(1);
   const [actionError, setActionError] = useState("");
   const [hireDateFrom, setHireDateFrom] = useState("");
@@ -238,18 +345,80 @@ export default function EmployeePage() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const pageSize = 5;
+  const pageSize = 10;
   const queryClient = useQueryClient();
   const { can, loading: authLoading } = useAuth();
 
   const departmentQuery = useQuery({
     queryKey: ["employee-departments"],
-    enabled: !authLoading && can("employee.read"),
+    enabled: !authLoading && can("department.read"),
     queryFn: async () => {
-      const response = await api.get<ApiResponse<DepartmentOption[]>>(
+      const response = await api.get<ApiResponse<NamedOption[]>>(
         "/employees/get-all-departments",
       );
       return response.data;
+    },
+  });
+
+  const positionQuery = useQuery({
+    queryKey: ["employee-positions"],
+    enabled: !authLoading && can("position.read"),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: "1",
+        per_page: "100",
+        sort_by: "name",
+        sort_order: "ASC",
+      });
+      const response = await api.get<ApiResponse<PositionOptionListData>>(
+        `/positions?${params}`,
+      );
+      const data = response.data;
+      return Array.isArray(data)
+        ? data
+        : (data.items ?? data.results ?? data.positions ?? []);
+    },
+  });
+
+  const branchQuery = useQuery({
+    queryKey: ["employee-branches"],
+    enabled: !authLoading && can("branch.read"),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: "1",
+        per_page: "100",
+        sort_by: "name",
+        sort_order: "ASC",
+        status: "true",
+      });
+      const response = await api.get<ApiResponse<BranchOptionListData>>(
+        `/branches?${params}`,
+      );
+      const data = response.data;
+      return Array.isArray(data)
+        ? data
+        : (data.items ?? data.results ?? data.branches ?? []);
+    },
+  });
+
+  const managerQuery = useQuery({
+    queryKey: ["employee-managers"],
+    enabled: !authLoading && can("employee.read"),
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: "1",
+        per_page: "100",
+        sort_by: "first_name",
+        sort_order: "ASC",
+      });
+      const response = await api.get<ApiResponse<EmployeeListData>>(
+        `/employees?${params}`,
+      );
+      const data = response.data;
+      const items = Array.isArray(data)
+        ? data
+        : (data.items ?? data.results ?? data.employees ?? []);
+      return items.map(normalizeEmployee);
     },
   });
 
@@ -261,6 +430,11 @@ export default function EmployeePage() {
       query,
       statusFilter,
       departmentFilter,
+      branchFilter,
+      managerFilter,
+      positionFilter,
+      employmentTypeFilter,
+      employmentStatusFilter,
       sortBy,
       sortAsc,
       hireDateFrom,
@@ -278,6 +452,13 @@ export default function EmployeePage() {
         params.set("status", String(statusFilter === "active"));
       if (departmentFilter !== "all")
         params.set("department_id", departmentFilter);
+      if (branchFilter !== "all") params.set("branch_id", branchFilter);
+      if (managerFilter !== "all") params.set("manager_id", managerFilter);
+      if (positionFilter.trim()) params.set("position", positionFilter.trim());
+      if (employmentTypeFilter !== "all")
+        params.set("employment_type", employmentTypeFilter);
+      if (employmentStatusFilter !== "all")
+        params.set("employment_status", employmentStatusFilter);
       if (hireDateFrom) params.set("hire_date_from", hireDateFrom);
       if (hireDateTo) params.set("hire_date_to", hireDateTo);
       return api.get<ApiResponse<EmployeeListData>>(`/employees?${params}`);
@@ -301,11 +482,24 @@ export default function EmployeePage() {
       )
     : 0;
   const departmentOptions = departmentQuery.data ?? [];
+  const positionOptions = positionQuery.data ?? [];
+  const branchOptions = branchQuery.data ?? [];
+  const managerOptions = managerQuery.data ?? [];
   const loading = employeeQuery.isPending;
   const error = employeeQuery.error
     ? employeeQuery.error instanceof ApiError
       ? employeeQuery.error.message
       : "Unable to load employees."
+    : "";
+  const referenceDataError =
+    departmentQuery.error ??
+    positionQuery.error ??
+    branchQuery.error ??
+    managerQuery.error;
+  const referenceDataErrorMessage = referenceDataError
+    ? referenceDataError instanceof ApiError
+      ? referenceDataError.message
+      : "Unable to load employee reference data."
     : "";
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -314,8 +508,13 @@ export default function EmployeePage() {
   const activeFilterCount = [
     statusFilter !== "all",
     departmentFilter !== "all",
-    sortBy !== "first_name",
-    !sortAsc,
+    branchFilter !== "all",
+    managerFilter !== "all",
+    Boolean(positionFilter.trim()),
+    employmentTypeFilter !== "all",
+    employmentStatusFilter !== "all",
+    sortBy !== "created_at",
+    sortAsc,
     Boolean(hireDateFrom),
     Boolean(hireDateTo),
   ].filter(Boolean).length;
@@ -323,8 +522,13 @@ export default function EmployeePage() {
   function clearFilters() {
     setStatusFilter("all");
     setDepartmentFilter("all");
-    setSortBy("first_name");
-    setSortAsc(true);
+    setBranchFilter("all");
+    setManagerFilter("all");
+    setPositionFilter("");
+    setEmploymentTypeFilter("all");
+    setEmploymentStatusFilter("all");
+    setSortBy("created_at");
+    setSortAsc(false);
     setHireDateFrom("");
     setHireDateTo("");
     setFilterError("");
@@ -351,13 +555,20 @@ export default function EmployeePage() {
   function openEdit(employee: Employee) {
     setEditing(employee);
     setForm({
+      employee_code: employee.employee_code,
       first_name: employee.first_name,
       last_name: employee.last_name,
       email: employee.email,
       phone_number: employee.phone_number,
       department_id: employee.department_id,
-      position: employee.position,
-      hire_date: employee.hire_date,
+      position_id: employee.position_id,
+      branch_id: employee.branch_id,
+      manager_id: employee.manager_id,
+      employment_type: employee.employment_type,
+      employment_status: employee.employment_status,
+      contract_start_date: dateInputValue(employee.contract_start_date),
+      contract_end_date: dateInputValue(employee.contract_end_date),
+      hire_date: dateInputValue(employee.hire_date),
       address: employee.address,
       status: employee.status,
     });
@@ -368,7 +579,7 @@ export default function EmployeePage() {
   async function openDetail(employee: Employee) {
     try {
       const response = await api.get<ApiResponse<EmployeeApi>>(
-        `/employees/${employee.id}/detail`,
+        `/employees/${encodeURIComponent(employee.id)}/detail`,
       );
       setSelected(normalizeEmployee(response.data));
     } catch (requestError) {
@@ -389,20 +600,117 @@ export default function EmployeePage() {
       setActionError("Please select a department.");
       return;
     }
-    if (!form.position) {
+    if (!form.position_id) {
       setActionError("Please select a position.");
       return;
     }
-    if (!editing && !can("employee.create")) {
-      setActionError("You do not have permission to create employees.");
+    if (!form.first_name.trim() || !form.last_name.trim()) {
+      setActionError("First name and last name are required.");
       return;
+    }
+    if (!form.phone_number.trim()) {
+      setActionError("Phone number is required.");
+      return;
+    }
+    if (!/^[0-9+()\- ]{8,20}$/.test(form.phone_number.trim())) {
+      setActionError(
+        "Phone number must be 8-20 characters using numbers and +()- or spaces.",
+      );
+      return;
+    }
+    if (form.employment_type === "CONTRACT") {
+      if (!form.contract_start_date || !form.contract_end_date) {
+        setActionError(
+          "Contract start date and end date are required for contract employees.",
+        );
+        return;
+      }
+      if (form.contract_end_date < form.contract_start_date) {
+        setActionError(
+          "Contract end date cannot be earlier than contract start date.",
+        );
+        return;
+      }
+    }
+    if (
+      (editing && !can("employee.update")) ||
+      (!editing && !can("employee.create"))
+    ) {
+      setActionError(
+        `You do not have permission to ${editing ? "update" : "create"} employees.`,
+      );
+      return;
+    }
+
+    const payload = {
+      ...(form.employee_code.trim()
+        ? { employee_code: form.employee_code.trim() }
+        : {}),
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      email: form.email.trim(),
+      phone_number: form.phone_number.trim(),
+      department_id: form.department_id,
+      position_id: form.position_id,
+      branch_id: form.branch_id || null,
+      manager_id: form.manager_id || null,
+      employment_type: form.employment_type,
+      employment_status: form.employment_status,
+      contract_start_date: form.contract_start_date || null,
+      contract_end_date: form.contract_end_date || null,
+      status: form.status,
+      hire_date: form.hire_date,
+      address: form.address.trim() || null,
+    };
+    let requestPayload: Record<string, unknown> = payload;
+    if (editing) {
+      const currentValues: Record<string, unknown> = {
+        first_name: editing.first_name,
+        last_name: editing.last_name,
+        email: editing.email,
+        phone_number: editing.phone_number,
+        department_id: editing.department_id,
+        position_id: editing.position_id,
+        branch_id: editing.branch_id || null,
+        manager_id: editing.manager_id || null,
+        employment_type: editing.employment_type,
+        employment_status: editing.employment_status,
+        contract_start_date: editing.contract_start_date || null,
+        contract_end_date: editing.contract_end_date || null,
+        status: editing.status,
+        hire_date: dateInputValue(editing.hire_date),
+        address: editing.address || null,
+      };
+      const updates: Record<string, unknown> = {};
+      for (const [field, value] of Object.entries(payload)) {
+        if (field === "employee_code") {
+          if (value !== editing.employee_code) updates[field] = value;
+          continue;
+        }
+        if (value !== currentValues[field]) updates[field] = value;
+      }
+      if (
+        form.employment_type === "CONTRACT" &&
+        editing.employment_type !== "CONTRACT"
+      ) {
+        updates.contract_start_date = form.contract_start_date;
+        updates.contract_end_date = form.contract_end_date;
+      }
+      if (!Object.keys(updates).length) {
+        setActionError("No employee information has changed.");
+        return;
+      }
+      requestPayload = updates;
     }
     setSavingEmployee(true);
     try {
       if (editing) {
-        await api.put(`/employees/${editing.id}/update`, form);
+        await api.put(
+          `/employees/${encodeURIComponent(editing.id)}/update`,
+          requestPayload,
+        );
       } else {
-        await api.post("/employees/create", form);
+        await api.post("/employees/create", requestPayload);
       }
       setFormOpen(false);
       showSuccess(editing ? "Employee updated" : "Employee created");
@@ -423,13 +731,14 @@ export default function EmployeePage() {
   }
 
   async function toggleStatus(employee: Employee) {
-    if (updatingStatusIds.has(employee.id)) return;
+    if (!can("employee.update") || updatingStatusIds.has(employee.id)) return;
     setActionError("");
     setUpdatingStatusIds((current) => new Set(current).add(employee.id));
     try {
-      await api.patch(`/employees/${employee.id}/status`, {
-        status: !employee.status,
-      });
+      await api.patch(
+        `/employees/${encodeURIComponent(employee.id)}/status`,
+        undefined,
+      );
       await queryClient.invalidateQueries({ queryKey: ["employees"] });
       showSuccess("Employee status updated");
     } catch (requestError) {
@@ -452,11 +761,11 @@ export default function EmployeePage() {
   }
 
   async function deleteEmployee(employee: Employee) {
-    if (deleting) return;
+    if (deleting || !can("employee.delete")) return;
     setActionError("");
     setDeleting(true);
     try {
-      await api.delete(`/employees/${employee.id}/delete`);
+      await api.delete(`/employees/${encodeURIComponent(employee.id)}/delete`);
       setSelected(null);
       setDeleteTarget(null);
       showSuccess("Employee deleted");
@@ -562,7 +871,7 @@ export default function EmployeePage() {
                   setQuery(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Search by name, email, code..."
+                placeholder="Search by name or email..."
                 className="pl-9"
               />
             </div>
@@ -590,6 +899,11 @@ export default function EmployeePage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {error && (
+            <p className="mx-4 mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
           <div className="overflow-x-auto px-4">
             <Table className="min-w-[920px] overflow-hidden rounded-lg border">
               <TableHeader>
@@ -598,6 +912,7 @@ export default function EmployeePage() {
                   <TableHead>Employee</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Position</TableHead>
+                  <TableHead>Branch</TableHead>
                   <TableHead>Hire date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-24 text-right">Actions</TableHead>
@@ -617,10 +932,16 @@ export default function EmployeePage() {
                         <Skeleton className="h-5 w-64" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="h-6 w-20 rounded-full" />
+                        <Skeleton className="h-5 w-28" />
                       </TableCell>
                       <TableCell>
-                        <Skeleton className="ml-auto h-8 w-20" />
+                        <Skeleton className="h-5 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-20" />
                       </TableCell>
                       <TableCell>
                         <Skeleton className="ml-auto h-8 w-20" />
@@ -662,12 +983,18 @@ export default function EmployeePage() {
                     </TableCell>
                     <TableCell>{employee.position}</TableCell>
                     <TableCell className="text-muted-foreground">
+                      {employee.branch || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {formatDate(employee.hire_date)}
                     </TableCell>
                     <TableCell>
                       <StatusToggle
                         active={employee.status}
-                        disabled={updatingStatusIds.has(employee.id)}
+                        disabled={
+                          !can("employee.update") ||
+                          updatingStatusIds.has(employee.id)
+                        }
                         onClick={() => void toggleStatus(employee)}
                       />
                     </TableCell>
@@ -681,14 +1008,26 @@ export default function EmployeePage() {
                         >
                           <Eye />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          title="Edit employee"
-                          onClick={() => openEdit(employee)}
-                        >
-                          <Pencil />
-                        </Button>
+                        {can("employee.update") && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Edit employee"
+                            onClick={() => openEdit(employee)}
+                          >
+                            <Pencil />
+                          </Button>
+                        )}
+                        {can("employee.delete") && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Delete employee"
+                            onClick={() => setDeleteTarget(employee)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -696,7 +1035,7 @@ export default function EmployeePage() {
                 {!visibleEmployees.length && (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="h-32 text-center text-muted-foreground"
                     >
                       No employees found. Try changing your search or filters.
@@ -814,6 +1153,97 @@ export default function EmployeePage() {
                 ))}
               </select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="employee-branch-filter">Branch</Label>
+              <select
+                id="employee-branch-filter"
+                value={branchFilter}
+                onChange={(event) => {
+                  setBranchFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="all">All branches</option>
+                {branchOptions.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="employee-manager-filter">Manager</Label>
+              <select
+                id="employee-manager-filter"
+                value={managerFilter}
+                onChange={(event) => {
+                  setManagerFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="all">All managers</option>
+                {managerOptions.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {fullName(manager)} ({manager.employee_code})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="employee-position-filter">Position</Label>
+              <Input
+                id="employee-position-filter"
+                value={positionFilter}
+                onChange={(event) => {
+                  setPositionFilter(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search position name"
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="employee-employment-type-filter">
+                  Employment type
+                </Label>
+                <select
+                  id="employee-employment-type-filter"
+                  value={employmentTypeFilter}
+                  onChange={(event) => {
+                    setEmploymentTypeFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="all">All types</option>
+                  <option value="PERMANENT">Permanent</option>
+                  <option value="CONTRACT">Contract</option>
+                  <option value="INTERN">Intern</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="employee-employment-status-filter">
+                  Employment status
+                </Label>
+                <select
+                  id="employee-employment-status-filter"
+                  value={employmentStatusFilter}
+                  onChange={(event) => {
+                    setEmploymentStatusFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="all">All employment statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="ON_LEAVE">On leave</option>
+                  <option value="RESIGNED">Resigned</option>
+                  <option value="TERMINATED">Terminated</option>
+                </select>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="employee-sort-filter">Sort by</Label>
@@ -826,15 +1256,18 @@ export default function EmployeePage() {
                   }}
                   className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                 >
+                  <option value="created_at">Created date</option>
                   <option value="first_name">First name</option>
                   <option value="last_name">Last name</option>
                   <option value="employee_code">Employee code</option>
                   <option value="email">Email</option>
                   <option value="department_name">Department</option>
                   <option value="position">Position</option>
+                  <option value="branch_name">Branch</option>
+                  <option value="employment_type">Employment type</option>
+                  <option value="employment_status">Employment status</option>
                   <option value="status">Status</option>
                   <option value="hire_date">Hire date</option>
-                  <option value="created_at">Created date</option>
                   <option value="updated_at">Updated date</option>
                 </select>
               </div>
@@ -933,6 +1366,40 @@ export default function EmployeePage() {
                   <p className="mt-1 font-medium">{selected.department}</p>
                 </div>
                 <div>
+                  <p className="text-muted-foreground">Branch</p>
+                  <p className="mt-1 font-medium">{selected.branch || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Manager</p>
+                  <p className="mt-1 font-medium">{selected.manager || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Employment type</p>
+                  <p className="mt-1 font-medium">{selected.employment_type}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Employment status</p>
+                  <p className="mt-1 font-medium">
+                    {selected.employment_status.replaceAll("_", " ")}
+                  </p>
+                </div>
+                {selected.employment_type === "CONTRACT" && (
+                  <>
+                    <div>
+                      <p className="text-muted-foreground">Contract start</p>
+                      <p className="mt-1 font-medium">
+                        {formatDate(selected.contract_start_date)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Contract end</p>
+                      <p className="mt-1 font-medium">
+                        {formatDate(selected.contract_end_date)}
+                      </p>
+                    </div>
+                  </>
+                )}
+                <div>
                   <p className="text-muted-foreground">Hire date</p>
                   <p className="mt-1 font-medium">
                     {formatDate(selected.hire_date)}
@@ -944,22 +1411,26 @@ export default function EmployeePage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  variant="destructive"
-                  onClick={() => setDeleteTarget(selected)}
-                  disabled={deleting}
-                >
-                  <Trash2 /> Delete
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelected(null);
-                    openEdit(selected);
-                  }}
-                >
-                  <Pencil /> Edit employee
-                </Button>
+                {can("employee.delete") && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setDeleteTarget(selected)}
+                    disabled={deleting}
+                  >
+                    <Trash2 /> Delete
+                  </Button>
+                )}
+                {can("employee.update") && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelected(null);
+                      openEdit(selected);
+                    }}
+                  >
+                    <Pencil /> Edit employee
+                  </Button>
+                )}
               </DialogFooter>
             </div>
           )}
@@ -1014,11 +1485,32 @@ export default function EmployeePage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveEmployee} className="grid gap-4 sm:grid-cols-2">
+            {referenceDataErrorMessage && (
+              <p
+                className="rounded-md bg-destructive/10 p-3 text-sm text-destructive sm:col-span-2"
+                role="alert"
+              >
+                {referenceDataErrorMessage}
+              </p>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="employee-code">Employee code (optional)</Label>
+              <Input
+                id="employee-code"
+                maxLength={50}
+                value={form.employee_code}
+                onChange={(event) =>
+                  setForm({ ...form, employee_code: event.target.value })
+                }
+                placeholder="Generated automatically if empty"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="first-name">First name</Label>
               <Input
                 id="first-name"
                 required
+                maxLength={100}
                 value={form.first_name}
                 onChange={(event) =>
                   setForm({ ...form, first_name: event.target.value })
@@ -1030,6 +1522,7 @@ export default function EmployeePage() {
               <Input
                 id="last-name"
                 required
+                maxLength={100}
                 value={form.last_name}
                 onChange={(event) =>
                   setForm({ ...form, last_name: event.target.value })
@@ -1054,6 +1547,9 @@ export default function EmployeePage() {
                 id="phone"
                 type="tel"
                 required
+                maxLength={20}
+                minLength={8}
+                pattern="[0-9+() -]{8,20}"
                 value={form.phone_number}
                 onChange={(event) =>
                   setForm({ ...form, phone_number: event.target.value })
@@ -1083,13 +1579,13 @@ export default function EmployeePage() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="position">Position</Label>
+              <Label htmlFor="position-id">Position</Label>
               <select
-                id="position"
+                id="position-id"
                 required
-                value={form.position}
+                value={form.position_id}
                 onChange={(event) => {
-                  setForm({ ...form, position: event.target.value });
+                  setForm({ ...form, position_id: event.target.value });
                   setActionError("");
                 }}
                 className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
@@ -1097,11 +1593,141 @@ export default function EmployeePage() {
                 <option value="" disabled>
                   Select Position
                 </option>
-                {positions.map((position) => (
-                  <option key={position}>{position}</option>
+                {positionOptions.map((position) => (
+                  <option key={position.id} value={position.id}>
+                    {position.name}
+                  </option>
                 ))}
               </select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="branch-id">Branch (optional)</Label>
+              <select
+                id="branch-id"
+                value={form.branch_id}
+                onChange={(event) => {
+                  setForm({ ...form, branch_id: event.target.value });
+                  setActionError("");
+                }}
+                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">No branch</option>
+                {form.branch_id &&
+                  !branchOptions.some(
+                    (branch) => branch.id === form.branch_id,
+                  ) && (
+                    <option value={form.branch_id}>
+                      Current branch (unavailable)
+                    </option>
+                  )}
+                {branchOptions.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="manager-id">Manager (optional)</Label>
+              <select
+                id="manager-id"
+                value={form.manager_id}
+                onChange={(event) => {
+                  setForm({ ...form, manager_id: event.target.value });
+                  setActionError("");
+                }}
+                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="">No manager</option>
+                {managerOptions
+                  .filter((manager) => manager.id !== editing?.id)
+                  .map((manager) => (
+                    <option key={manager.id} value={manager.id}>
+                      {fullName(manager)} ({manager.employee_code})
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="employment-type">Employment type</Label>
+              <select
+                id="employment-type"
+                required
+                value={form.employment_type}
+                onChange={(event) => {
+                  setForm({
+                    ...form,
+                    employment_type: event.target.value as EmploymentType,
+                  });
+                  setActionError("");
+                }}
+                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="PERMANENT">Permanent</option>
+                <option value="CONTRACT">Contract</option>
+                <option value="INTERN">Intern</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="employment-status">Employment status</Label>
+              <select
+                id="employment-status"
+                required
+                value={form.employment_status}
+                onChange={(event) => {
+                  setForm({
+                    ...form,
+                    employment_status: event.target.value as EmploymentStatus,
+                  });
+                  setActionError("");
+                }}
+                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="ON_LEAVE">On leave</option>
+                <option value="RESIGNED">Resigned</option>
+                <option value="TERMINATED">Terminated</option>
+              </select>
+            </div>
+            {form.employment_type === "CONTRACT" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="contract-start-date">
+                    Contract start date
+                  </Label>
+                  <Input
+                    id="contract-start-date"
+                    type="date"
+                    required
+                    value={form.contract_start_date}
+                    onChange={(event) => {
+                      setForm({
+                        ...form,
+                        contract_start_date: event.target.value,
+                      });
+                      setActionError("");
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contract-end-date">Contract end date</Label>
+                  <Input
+                    id="contract-end-date"
+                    type="date"
+                    required
+                    min={form.contract_start_date || undefined}
+                    value={form.contract_end_date}
+                    onChange={(event) => {
+                      setForm({
+                        ...form,
+                        contract_end_date: event.target.value,
+                      });
+                      setActionError("");
+                    }}
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <Label htmlFor="hire-date">Hire date</Label>
               <Input
@@ -1118,11 +1744,21 @@ export default function EmployeePage() {
               <Label htmlFor="address">Address</Label>
               <Input
                 id="address"
+                maxLength={255}
                 value={form.address}
                 onChange={(event) =>
                   setForm({ ...form, address: event.target.value })
                 }
                 placeholder="City or full address"
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-md border px-3 py-2">
+              <Label htmlFor="employee-active-status">Active account</Label>
+              <Switch
+                id="employee-active-status"
+                checked={form.status}
+                onCheckedChange={(status) => setForm({ ...form, status })}
+                aria-label="Toggle active status"
               />
             </div>
             <DialogFooter className="sm:col-span-2">
@@ -1139,7 +1775,7 @@ export default function EmployeePage() {
               <Button
                 type="submit"
                 disabled={
-                  savingEmployee || !form.department_id || !form.position
+                  savingEmployee || !form.department_id || !form.position_id
                 }
               >
                 {savingEmployee && <Spinner />}

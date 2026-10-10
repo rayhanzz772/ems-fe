@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Building2,
   BriefcaseBusiness,
+  CalendarDays,
   UsersRound,
   UserGroup,
   IdCardLanyard,
@@ -96,6 +97,12 @@ const navSections: NavSection[] = [
         icon: IdCardLanyard,
         permission: "employee.read",
       },
+      {
+        title: "Leaves",
+        href: "/leaves",
+        icon: CalendarDays,
+        permission: "leave_request.read",
+      },
     ],
   },
   {
@@ -128,6 +135,7 @@ export function AppSidebar() {
     pathname.startsWith("/branches") ||
     pathname.startsWith("/positions") ||
     pathname.startsWith("/employees") ||
+    pathname.startsWith("/leaves") ||
     pathname.startsWith("/audit-logs") ||
     pathname.startsWith("/api-documentation") ||
     pathname.startsWith("/roles");

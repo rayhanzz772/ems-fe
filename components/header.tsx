@@ -30,7 +30,10 @@ export function Header() {
     pathname === "/dashboard" ||
     pathname === "/users" ||
     pathname === "/departments" ||
+    pathname === "/branches" ||
+    pathname === "/positions" ||
     pathname === "/employees" ||
+    pathname === "/leaves" ||
     pathname === "/audit-logs" ||
     pathname === "/api-documentation" ||
     pathname === "/roles";
@@ -74,7 +77,10 @@ export function Header() {
     "/dashboard": { section: "Overview", label: "Dashboard" },
     "/users": { section: "Management", label: "Users" },
     "/departments": { section: "Management", label: "Departments" },
+    "/branches": { section: "Management", label: "Branches" },
+    "/positions": { section: "Management", label: "Positions" },
     "/employees": { section: "Management", label: "Employees" },
+    "/leaves": { section: "Management", label: "Leaves" },
     "/audit-logs": { section: "System", label: "Audit Log" },
     "/api-documentation": { section: "System", label: "API Docs" },
     "/roles": { section: "Management", label: "Roles" },

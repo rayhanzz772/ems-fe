@@ -5,11 +5,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api, type ApiResponse } from "@/lib/api";
 import {
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Plus,
   UsersRound,
+  X,
 } from "lucide-react";
 import {
   Button,
@@ -79,6 +81,8 @@ type LeaveRequestApi = {
     requires_balance?: boolean;
   } | null;
   approver?: PersonSummary | null;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type LeaveCalendarData = LeaveRequestApi[] | { items?: LeaveRequestApi[] };
@@ -102,6 +106,8 @@ type LeaveEvent = {
   reason: string;
   decisionNote: string;
   approver: string;
+  decidedAt: string;
+  createdAt: string;
 };
 
 type LeaveForm = {
@@ -191,6 +197,8 @@ function normalizeLeave(value: LeaveRequestApi): LeaveEvent {
     reason: value.reason ?? "",
     decisionNote: value.decision_note ?? "",
     approver: fullName(value.approver),
+    decidedAt: value.decided_at ?? "",
+    createdAt: value.created_at ?? "",
   };
 }
 
@@ -237,6 +245,14 @@ export default function LeavesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<LeaveEvent | null>(
+    null,
+  );
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [decisionNote, setDecisionNote] = useState("");
+  const [decisionError, setDecisionError] = useState("");
+  const [deciding, setDeciding] = useState(false);
 
   const calendarDays = useMemo(() => {
     const year = visibleMonth.getFullYear();
@@ -436,6 +452,84 @@ export default function LeavesPage() {
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function openRequestDetail(leave: LeaveEvent) {
+    setSelectedRequest(leave);
+    setDetailLoading(true);
+    setDetailError("");
+    setDecisionError("");
+    setDecisionNote("");
+    try {
+      const response = await api.get<ApiResponse<LeaveRequestApi>>(
+        `/leaves/requests/${encodeURIComponent(leave.id)}/detail`,
+      );
+      setSelectedRequest(normalizeLeave(response.data));
+    } catch (requestError) {
+      const message =
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Unable to load leave request details.";
+      setDetailError(message);
+      showError("Unable to load leave request details", message);
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  async function decideRequest(status: "APPROVED" | "REJECTED") {
+    if (
+      !selectedRequest ||
+      selectedRequest.status !== "PENDING" ||
+      !can("leave_request.decide") ||
+      deciding
+    ) {
+      return;
+    }
+
+    setDecisionError("");
+    setDeciding(true);
+    try {
+      await api.patch(
+        `/leaves/requests/${encodeURIComponent(selectedRequest.id)}/decision`,
+        {
+          status,
+          decision_note: decisionNote.trim() || undefined,
+        },
+      );
+      showSuccess(
+        status === "APPROVED"
+          ? "Leave request approved"
+          : "Leave request rejected",
+      );
+      setSelectedRequest(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["leaves", "calendar"] }),
+        queryClient.invalidateQueries({ queryKey: ["leaves", "requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["leaves", "balances"] }),
+      ]);
+    } catch (requestError) {
+      const message =
+        requestError instanceof ApiError
+          ? requestError.message
+          : `Unable to ${status === "APPROVED" ? "approve" : "reject"} leave request.`;
+      setDecisionError(message);
+      showError(
+        status === "APPROVED"
+          ? "Unable to approve leave request"
+          : "Unable to reject leave request",
+        message,
+      );
+      if (requestError instanceof ApiError && requestError.status === 409) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["leaves", "calendar"] }),
+          queryClient.invalidateQueries({ queryKey: ["leaves", "requests"] }),
+          queryClient.invalidateQueries({ queryKey: ["leaves", "balances"] }),
+        ]);
+      }
+    } finally {
+      setDeciding(false);
     }
   }
 
@@ -667,23 +761,21 @@ export default function LeavesPage() {
                     : "No leave scheduled"}
                 </CardDescription>
               </div>
-              {canCreateRequest && (
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label="Add leave on selected date"
-                  onClick={() => openCreate(selectedDate)}
-                  disabled={!can("employee.read") || !can("leave_type.read")}
-                >
-                  <Plus />
-                </Button>
-              )}
             </CardHeader>
             <CardContent className="space-y-3">
-              {selectedDayEvents.map((leave) => (
-                <LeaveCard key={leave.id} leave={leave} />
-              ))}
-              {!selectedDayEvents.length && (
+              {calendarQuery.isPending &&
+                Array.from({ length: 2 }, (_, index) => (
+                  <LeaveCardSkeleton key={index} />
+                ))}
+              {!calendarQuery.isPending &&
+                selectedDayEvents.map((leave) => (
+                  <LeaveCard
+                    key={leave.id}
+                    leave={leave}
+                    onClick={() => void openRequestDetail(leave)}
+                  />
+                ))}
+              {!calendarQuery.isPending && !selectedDayEvents.length && (
                 <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
                   <CalendarDays className="size-5" />
                   {canCreateRequest ? (
@@ -713,34 +805,37 @@ export default function LeavesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-1">
-              {upcomingEvents.slice(0, 6).map((leave) => (
-                <button
-                  type="button"
-                  key={leave.id}
-                  onClick={() => {
-                    setSelectedDate(leave.startDate);
-                    setVisibleMonth(dateFromKey(leave.startDate));
-                  }}
-                  className="w-full rounded-lg p-3 text-left transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {leave.employee}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {leave.type} · {leave.durationDays} days
-                      </p>
+              {calendarQuery.isPending &&
+                Array.from({ length: 4 }, (_, index) => (
+                  <UpcomingLeaveSkeleton key={index} />
+                ))}
+              {!calendarQuery.isPending &&
+                upcomingEvents.slice(0, 6).map((leave) => (
+                  <button
+                    type="button"
+                    key={leave.id}
+                    onClick={() => void openRequestDetail(leave)}
+                    className="w-full rounded-lg border border-l-4 p-3 text-left transition-colors hover:bg-muted/50"
+                    style={{ borderLeftColor: leave.color }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {leave.employee}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {leave.type} · {leave.durationDays} days
+                        </p>
+                      </div>
+                      <StatusBadge status={leave.status} />
                     </div>
-                    <StatusBadge status={leave.status} />
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {formatDate(leave.startDate)}
-                    {leave.endDate !== leave.startDate &&
-                      ` – ${formatDate(leave.endDate)}`}
-                  </p>
-                </button>
-              ))}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {formatDate(leave.startDate)}
+                      {leave.endDate !== leave.startDate &&
+                        ` – ${formatDate(leave.endDate)}`}
+                    </p>
+                  </button>
+                ))}
               {!upcomingEvents.length && !calendarQuery.isPending && (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   No upcoming leave requests.
@@ -750,6 +845,182 @@ export default function LeavesPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={Boolean(selectedRequest)}
+        onOpenChange={(open) => {
+          if (!open && !deciding) {
+            setSelectedRequest(null);
+            setDecisionError("");
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Leave request details</DialogTitle>
+            <DialogDescription>
+              Review the request details and decide whether to approve it.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-5">
+              {detailLoading ? (
+                <div
+                  className="space-y-4"
+                  role="status"
+                  aria-label="Loading leave request details"
+                >
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                      style={{
+                        color: selectedRequest.color,
+                        backgroundColor: `${selectedRequest.color}1A`,
+                      }}
+                    >
+                      {eventInitials(selectedRequest.employee)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">
+                        {selectedRequest.employee}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedRequest.employeeCode || "Employee"}
+                      </p>
+                    </div>
+                    <StatusBadge status={selectedRequest.status} />
+                  </div>
+
+                  <div className="grid gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
+                    <DetailField
+                      label="Leave type"
+                      value={selectedRequest.type}
+                    />
+                    <DetailField
+                      label="Duration"
+                      value={`${selectedRequest.durationDays} days`}
+                    />
+                    <DetailField
+                      label="Start date"
+                      value={formatDate(selectedRequest.startDate, {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    />
+                    <DetailField
+                      label="End date"
+                      value={formatDate(selectedRequest.endDate, {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    />
+                    <DetailField
+                      label="Approver"
+                      value={selectedRequest.approver}
+                    />
+                    <DetailField
+                      label="Decision time"
+                      value={
+                        selectedRequest.decidedAt
+                          ? new Date(selectedRequest.decidedAt).toLocaleString(
+                              "id-ID",
+                            )
+                          : "Not decided"
+                      }
+                    />
+                    <div className="sm:col-span-2">
+                      <DetailField
+                        label="Reason"
+                        value={selectedRequest.reason}
+                      />
+                    </div>
+                    {selectedRequest.decisionNote && (
+                      <div className="sm:col-span-2">
+                        <DetailField
+                          label="Decision note"
+                          value={selectedRequest.decisionNote}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {detailError && (
+                    <p
+                      className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+                      role="alert"
+                    >
+                      {detailError}
+                    </p>
+                  )}
+                  {decisionError && (
+                    <p
+                      className="rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+                      role="alert"
+                    >
+                      {decisionError}
+                    </p>
+                  )}
+
+                  {selectedRequest.status === "PENDING" &&
+                    can("leave_request.decide") && (
+                      <div className="space-y-2">
+                        <Label htmlFor="leave-decision-note">
+                          Decision note (optional)
+                        </Label>
+                        <Textarea
+                          id="leave-decision-note"
+                          maxLength={255}
+                          rows={3}
+                          value={decisionNote}
+                          onChange={(event) =>
+                            setDecisionNote(event.target.value)
+                          }
+                          placeholder="Add a note for this decision"
+                        />
+                      </div>
+                    )}
+
+                  <DialogFooter>
+                    {selectedRequest.status === "PENDING" &&
+                      can("leave_request.decide") && (
+                        <>
+                          <Button
+                            variant="destructive"
+                            onClick={() => void decideRequest("REJECTED")}
+                            disabled={deciding || detailLoading}
+                          >
+                            {deciding ? <Spinner /> : <X />}
+                            {deciding ? "Saving..." : "Reject"}
+                          </Button>
+                          <Button
+                            onClick={() => void decideRequest("APPROVED")}
+                            disabled={deciding || detailLoading}
+                          >
+                            {deciding ? <Spinner /> : <Check />}
+                            {deciding ? "Saving..." : "Approve"}
+                          </Button>
+                        </>
+                      )}
+                    <DialogClose
+                      render={<Button variant="outline" disabled={deciding} />}
+                    >
+                      Close
+                    </DialogClose>
+                  </DialogFooter>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={formOpen}
@@ -963,9 +1234,55 @@ function StatusBadge({ status }: { status: LeaveStatus }) {
   );
 }
 
-function LeaveCard({ leave }: { leave: LeaveEvent }) {
+function DetailField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words font-medium">{value || "—"}</p>
+    </div>
+  );
+}
+
+function LeaveCardSkeleton() {
   return (
     <div className="flex items-start gap-3 rounded-lg border p-3">
+      <Skeleton className="size-9 shrink-0 rounded-full" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-3 w-1/3" />
+      </div>
+    </div>
+  );
+}
+
+function UpcomingLeaveSkeleton() {
+  return (
+    <div className="space-y-2 rounded-lg p-3">
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </div>
+      <Skeleton className="h-3 w-1/2" />
+      <Skeleton className="h-3 w-1/3" />
+    </div>
+  );
+}
+
+function LeaveCard({
+  leave,
+  onClick,
+}: {
+  leave: LeaveEvent;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`View ${leave.employee}'s ${leave.type} request details`}
+      className="flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/40"
+    >
       <span
         className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
         style={{
@@ -998,6 +1315,6 @@ function LeaveCard({ leave }: { leave: LeaveEvent }) {
           </p>
         )}
       </div>
-    </div>
+    </button>
   );
 }

@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/access-denied";
 
 type Role = {
   id: string;
@@ -420,18 +421,7 @@ export default function RolesPage() {
 
   if (authLoading) return null;
   if (!can("role.read")) {
-    return (
-      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access restricted</CardTitle>
-            <CardDescription>
-              Only administrators can manage roles.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   return (

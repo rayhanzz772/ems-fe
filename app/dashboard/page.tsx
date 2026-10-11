@@ -45,6 +45,7 @@ import {
   type DashboardLeaveEntry,
 } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/access-denied";
 
 const departmentConfig = {
   employees: { label: "Employees", color: "var(--chart-1)" },
@@ -142,18 +143,7 @@ export default function DashboardPage() {
 
   if (authLoading) return null;
   if (!can("dashboard.read")) {
-    return (
-      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access restricted</CardTitle>
-            <CardDescription>
-              You do not have permission to view the dashboard.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   const dashboard = dashboardQuery.data;

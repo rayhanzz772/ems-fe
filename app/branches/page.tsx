@@ -54,6 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/access-denied";
 import { showError, showSuccess } from "@/lib/toast";
 
 type Branch = {
@@ -320,18 +321,7 @@ export default function BranchesPage() {
 
   if (authLoading) return null;
   if (!can("branch.read")) {
-    return (
-      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access restricted</CardTitle>
-            <CardDescription>
-              You do not have permission to view branches.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   return (

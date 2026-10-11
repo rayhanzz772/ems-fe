@@ -49,6 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/access-denied";
 import { showError, showSuccess } from "@/lib/toast";
 
 type Position = {
@@ -270,18 +271,7 @@ export default function PositionPage() {
 
   if (authLoading) return null;
   if (!can("position.read")) {
-    return (
-      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access restricted</CardTitle>
-            <CardDescription>
-              You do not have permission to view positions.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   return (

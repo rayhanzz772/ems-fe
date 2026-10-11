@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/access-denied";
 
 type Employee = {
   id: string;
@@ -811,18 +812,7 @@ export default function EmployeePage() {
 
   if (authLoading) return null;
   if (!can("employee.read")) {
-    return (
-      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access restricted</CardTitle>
-            <CardDescription>
-              You do not have permission to view employees.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   return (

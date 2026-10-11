@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/table";
 import { showError, showSuccess } from "@/lib/toast";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/access-denied";
 
 type Department = {
   id: string;
@@ -323,18 +324,7 @@ export default function DepartmentPage() {
 
   if (authLoading) return null;
   if (!can("department.read")) {
-    return (
-      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access restricted</CardTitle>
-            <CardDescription>
-              You do not have permission to view departments.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   return (

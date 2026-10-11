@@ -34,6 +34,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
+import { AccessDenied } from "@/components/access-denied";
 import { showError, showSuccess } from "@/lib/toast";
 
 type LeaveStatus = "PENDING" | "APPROVED";
@@ -538,18 +539,7 @@ export default function LeavesPage() {
 
   if (authLoading) return null;
   if (!canReadCalendar) {
-    return (
-      <main className="mx-auto w-full max-w-5xl p-5 md:p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Access restricted</CardTitle>
-            <CardDescription>
-              You do not have permission to view the leave calendar.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </main>
-    );
+    return <AccessDenied />;
   }
 
   const activeEmployees = employeeQuery.data ?? [];

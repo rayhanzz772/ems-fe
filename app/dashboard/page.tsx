@@ -5,10 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   ArrowUpRight,
+  Briefcase,
+  Building2,
+  CalendarDays,
+  CalendarX2,
   Pencil,
   Plus,
   SquarePen,
   Trash,
+  Users,
 } from "lucide-react";
 import {
   Bar,
@@ -33,7 +38,12 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui";
-import { ApiError, getDashboard, type DashboardData } from "@/lib/api";
+import {
+  ApiError,
+  getDashboard,
+  type DashboardData,
+  type DashboardLeaveEntry,
+} from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 
 const departmentConfig = {
@@ -43,6 +53,21 @@ const departmentConfig = {
 const statusConfig = {
   active: { label: "Active", color: "rgba(36, 188, 92, 0.8)" },
   inactive: { label: "Inactive", color: "rgba(249, 115, 22, 0.8)" },
+} satisfies ChartConfig;
+
+const branchConfig = {
+  employees: { label: "Employees", color: "var(--chart-2)" },
+} satisfies ChartConfig;
+
+const leaveStatusConfig = {
+  pending: { label: "Pending", color: "rgba(245, 158, 11, 0.8)" },
+  approved: { label: "Approved", color: "rgba(36, 188, 92, 0.8)" },
+  rejected: { label: "Rejected", color: "rgba(239, 68, 68, 0.8)" },
+  cancelled: { label: "Cancelled", color: "rgba(100, 116, 139, 0.8)" },
+} satisfies ChartConfig;
+
+const leaveTypeConfig = {
+  days: { label: "Days", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 const departmentColors = [
@@ -63,6 +88,23 @@ function formatActivityDate(date: string) {
 
 function activityLabel(action: string, entity: string) {
   return `${action.charAt(0)}${action.slice(1).toLowerCase()} ${entity.toLowerCase()}`;
+}
+
+function formatDateKey(
+  value: string,
+  options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" },
+) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("id-ID", options).format(date);
+}
+
+function formatDateRange(startDate: string, endDate: string) {
+  return startDate === endDate
+    ? formatDateKey(startDate)
+    : `${formatDateKey(startDate)} – ${formatDateKey(endDate)}`;
 }
 
 const activityVisuals = {
@@ -143,19 +185,6 @@ export default function DashboardPage() {
           <Skeleton className="h-9 w-64" />
           <Skeleton className="h-4 w-96 max-w-full" />
         </section>
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <Card key={index}>
-              <CardHeader className="space-y-3">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-8 w-20" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-3 w-36" />
-              </CardContent>
-            </Card>
-          ))}
-        </section>
         <section className="grid gap-6 lg:grid-cols-2">
           {Array.from({ length: 2 }, (_, index) => (
             <Card key={index}>
@@ -213,6 +242,40 @@ export default function DashboardPage() {
       fill: "var(--color-inactive)",
     },
   ];
+  const branchData = dashboard.employee_by_branch.map((branch, index) => ({
+    name: branch.branch_name,
+    employees: branch.employee_count,
+    fill: departmentColors[index % departmentColors.length],
+  }));
+  const leaveStatusData = [
+    {
+      name: "Pending",
+      value: dashboard.leave_status.pending,
+      fill: "var(--color-pending)",
+    },
+    {
+      name: "Approved",
+      value: dashboard.leave_status.approved,
+      fill: "var(--color-approved)",
+    },
+    {
+      name: "Rejected",
+      value: dashboard.leave_status.rejected,
+      fill: "var(--color-rejected)",
+    },
+    {
+      name: "Cancelled",
+      value: dashboard.leave_status.cancelled,
+      fill: "var(--color-cancelled)",
+    },
+  ];
+  const leaveByTypeData = dashboard.approved_leave_by_type.map((type) => ({
+    name: type.leave_type,
+    days: type.total_days,
+    requests: type.total_requests,
+    fill: type.color,
+  }));
+  const onLeaveToday = dashboard.employees_on_leave_today.employees;
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -328,6 +391,100 @@ export default function DashboardPage() {
         </Card>
       </section>
 
+      <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Employees by branch</CardTitle>
+            <CardDescription>
+              Current employee distribution across branches.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {branchData.length ? (
+              <ChartContainer
+                config={branchConfig}
+                className="h-[280px] w-full"
+              >
+                <BarChart
+                  data={branchData}
+                  margin={{ left: 4, right: 12, top: 12 }}
+                >
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="name"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis tickLine={false} axisLine={false} width={30} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="line" />}
+                  />
+                  <Bar dataKey="employees" radius={[5, 5, 0, 0]}>
+                    {branchData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <EmptyState message="No branch data yet." />
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Leave requests</CardTitle>
+            <CardDescription>
+              Requests by status across all types.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {dashboard.leave_status.total ? (
+              <>
+                <ChartContainer
+                  config={leaveStatusConfig}
+                  className="mx-auto h-[280px] w-full max-w-[360px]"
+                >
+                  <PieChart>
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent hideLabel />}
+                    />
+                    <Pie
+                      data={leaveStatusData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={72}
+                      outerRadius={104}
+                      strokeWidth={4}
+                    >
+                      {leaveStatusData.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+                <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
+                  {leaveStatusData.map((entry) => (
+                    <span key={entry.name} className="flex items-center gap-2">
+                      <span
+                        className="size-2 rounded-full"
+                        style={{ backgroundColor: entry.fill }}
+                      />
+                      {entry.name} <strong>{entry.value}</strong>
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <EmptyState message="No leave requests yet." />
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
       <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -417,6 +574,229 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>On leave today</CardTitle>
+            <CardDescription>
+              {dashboard.employees_on_leave_today.total
+                ? `${dashboard.employees_on_leave_today.total} employee${dashboard.employees_on_leave_today.total === 1 ? "" : "s"} away today.`
+                : "Everyone is available today."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {onLeaveToday.length ? (
+              onLeaveToday.map((leave) => (
+                <LeaveRequestRow key={leave.id} leave={leave} />
+              ))
+            ) : (
+              <EmptyState message="No one is on leave today." />
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Upcoming leave</CardTitle>
+              <CardDescription>Scheduled time off ahead.</CardDescription>
+            </div>
+            <Button
+              nativeButton={false}
+              variant="ghost"
+              size="sm"
+              render={<Link href="/leaves" />}
+            >
+              View all <ArrowUpRight />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {dashboard.upcoming_leaves.length ? (
+              dashboard.upcoming_leaves
+                .slice(0, 5)
+                .map((leave) => (
+                  <LeaveRequestRow key={leave.id} leave={leave} />
+                ))
+            ) : (
+              <EmptyState message="No upcoming leave scheduled." />
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Approved leave by type</CardTitle>
+            <CardDescription>
+              Total approved days per leave type.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {leaveByTypeData.some((type) => type.days > 0) ? (
+              <ChartContainer
+                config={leaveTypeConfig}
+                className="h-[280px] w-full"
+              >
+                <BarChart
+                  data={leaveByTypeData}
+                  layout="vertical"
+                  margin={{ left: 8, right: 16, top: 12 }}
+                >
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                  <XAxis
+                    type="number"
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    tickLine={false}
+                    axisLine={false}
+                    width={120}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="line" />}
+                  />
+                  <Bar dataKey="days" radius={[0, 5, 5, 0]}>
+                    {leaveByTypeData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
+            ) : (
+              <EmptyState message="No approved leave yet." />
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Headcount by position</CardTitle>
+              <CardDescription>
+                Employees assigned per position.
+              </CardDescription>
+            </div>
+            <Button
+              nativeButton={false}
+              variant="ghost"
+              size="sm"
+              render={<Link href="/positions" />}
+            >
+              View all <ArrowUpRight />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {dashboard.employee_by_position.length ? (
+              dashboard.employee_by_position.map((position, index) => (
+                <div
+                  key={position.position_id}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex size-8 items-center justify-center rounded-lg text-white"
+                      style={{
+                        backgroundColor:
+                          departmentColors[index % departmentColors.length],
+                      }}
+                    >
+                      {position.position_name[0]?.toUpperCase()}
+                    </span>
+                    <span className="text-sm font-medium">
+                      {position.position_name}
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {position.employee_count} employees
+                  </span>
+                </div>
+              ))
+            ) : (
+              <EmptyState message="No positions yet." />
+            )}
+          </CardContent>
+        </Card>
+      </section>
     </main>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  icon,
+  className,
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+  icon: React.ReactNode;
+  className: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4 p-5">
+        <span
+          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${className}`}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="text-2xl font-semibold">{value}</p>
+          {hint && (
+            <p className="truncate text-xs text-muted-foreground">{hint}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <p className="flex h-full min-h-24 items-center justify-center rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+      {message}
+    </p>
+  );
+}
+
+function employeeInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase();
+}
+
+function LeaveRequestRow({ leave }: { leave: DashboardLeaveEntry }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+        style={{
+          color: leave.leave_type_color,
+          backgroundColor: `${leave.leave_type_color}1A`,
+        }}
+      >
+        {employeeInitials(leave.employee_name)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{leave.employee_name}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {leave.leave_type} · {leave.duration_days} days
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatDateRange(leave.start_date, leave.end_date)}
+        </p>
+      </div>
+    </div>
   );
 }

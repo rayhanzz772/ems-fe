@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -111,6 +111,15 @@ function normalizePermission(permission: {
   };
 }
 
+function formatResource(resource: string) {
+  const label = resource
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+  return label || "General";
+}
+
 function getPermissionItems(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
   if (typeof data !== "object" || data === null) return [];
@@ -178,6 +187,20 @@ export default function RolesPage() {
   const [permissionsLoading, setPermissionsLoading] = useState(false);
   const [permissionsSaving, setPermissionsSaving] = useState(false);
   const pageSize = 10;
+
+  const permissionGroups = useMemo(() => {
+    const groups = new Map<string, Permission[]>();
+    for (const permission of permissions) {
+      const resource = permission.resource || "general";
+      const bucket = groups.get(resource);
+      if (bucket) bucket.push(permission);
+      else groups.set(resource, [permission]);
+    }
+    return Array.from(groups, ([resource, items]) => ({
+      resource,
+      permissions: items,
+    })).sort((left, right) => left.resource.localeCompare(right.resource));
+  }, [permissions]);
 
   const rolesQuery = useQuery({
     queryKey: ["roles", page, query, sortAsc],
@@ -270,6 +293,14 @@ export default function RolesPage() {
     } finally {
       setPermissionsLoading(false);
     }
+  }
+
+  function togglePermissionGroup(ids: string[], select: boolean) {
+    setSelectedPermissionIds((current) =>
+      select
+        ? Array.from(new Set([...current, ...ids]))
+        : current.filter((id) => !ids.includes(id)),
+    );
   }
 
   async function savePermissions() {
@@ -678,7 +709,7 @@ export default function RolesPage() {
           !open && !permissionsSaving && setPermissionTarget(null)
         }
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Manage permissions</DialogTitle>
             <DialogDescription>
@@ -692,32 +723,72 @@ export default function RolesPage() {
               No permissions are available in the permission catalog.
             </p>
           ) : (
-            <div className="grid max-h-[55vh] gap-2 overflow-y-auto sm:grid-cols-2">
-              {permissions.map((permission) => (
-                <label
-                  key={permission.id}
-                  className="flex items-start gap-3 rounded-md border p-3 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedPermissionIds.includes(permission.id)}
-                    onChange={(event) =>
-                      setSelectedPermissionIds((current) =>
-                        event.target.checked
-                          ? [...current, permission.id]
-                          : current.filter((id) => id !== permission.id),
-                      )
-                    }
-                  />
-                  <span>
-                    <span className="block font-medium">{permission.key}</span>
-                    <span className="text-muted-foreground">
-                      {permission.description ||
-                        `${permission.resource} · ${permission.action}`}
-                    </span>
-                  </span>
-                </label>
-              ))}
+            <div className="max-h-[55vh] space-y-5 overflow-y-auto pr-1">
+              {permissionGroups.map((group) => {
+                const groupIds = group.permissions.map(
+                  (permission) => permission.id,
+                );
+                const selectedCount = groupIds.filter((id) =>
+                  selectedPermissionIds.includes(id),
+                ).length;
+                const allSelected = selectedCount === groupIds.length;
+                return (
+                  <section key={group.resource} className="space-y-2">
+                    <div className="flex items-center justify-between gap-3 border-b pb-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h3 className="truncate text-sm font-semibold">
+                          {formatResource(group.resource)}
+                        </h3>
+                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                          {selectedCount}/{groupIds.length}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          togglePermissionGroup(groupIds, !allSelected)
+                        }
+                      >
+                        {allSelected ? "Clear" : "Select all"}
+                      </Button>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {group.permissions.map((permission) => (
+                        <label
+                          key={permission.id}
+                          className="flex items-start gap-3 rounded-md border p-3 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedPermissionIds.includes(
+                              permission.id,
+                            )}
+                            onChange={(event) =>
+                              setSelectedPermissionIds((current) =>
+                                event.target.checked
+                                  ? [...current, permission.id]
+                                  : current.filter(
+                                      (id) => id !== permission.id,
+                                    ),
+                              )
+                            }
+                          />
+                          <span className="min-w-0">
+                            <span className="block break-words font-medium">
+                              {permission.key}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {permission.description || permission.action}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
             </div>
           )}
           <DialogFooter>

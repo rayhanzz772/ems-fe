@@ -115,7 +115,6 @@ type LeaveForm = {
   leaveTypeId: string;
   startDate: string;
   endDate: string;
-  durationDays: string;
   reason: string;
 };
 
@@ -124,7 +123,6 @@ const emptyForm: LeaveForm = {
   leaveTypeId: "",
   startDate: "",
   endDate: "",
-  durationDays: "",
   reason: "",
 };
 
@@ -218,6 +216,15 @@ function dateIsValid(value: string) {
   return (
     /^\d{4}-\d{2}-\d{2}$/.test(value) && toDateKey(dateFromKey(value)) === value
   );
+}
+
+function countDays(startDate: string, endDate: string) {
+  if (!dateIsValid(startDate) || !dateIsValid(endDate)) return 0;
+  const diff = Math.round(
+    (dateFromKey(endDate).getTime() - dateFromKey(startDate).getTime()) /
+      86400000,
+  );
+  return diff >= 0 ? diff + 1 : 0;
 }
 
 function eventInitials(name: string) {
@@ -384,7 +391,7 @@ export default function LeavesPage() {
     if (saving) return;
     setFormError("");
 
-    const durationDays = Number(form.durationDays);
+    const durationDays = countDays(form.startDate, form.endDate);
     if (!form.employeeId || !form.leaveTypeId) {
       setFormError("Select an employee and leave type.");
       return;
@@ -397,11 +404,7 @@ export default function LeavesPage() {
       setFormError("End date cannot be earlier than start date.");
       return;
     }
-    if (
-      !Number.isFinite(durationDays) ||
-      durationDays <= 0 ||
-      durationDays > 999.99
-    ) {
+    if (durationDays <= 0 || durationDays > 999.99) {
       setFormError(
         "Duration must be greater than 0 and no more than 999.99 days.",
       );
@@ -1033,8 +1036,8 @@ export default function LeavesPage() {
           <DialogHeader>
             <DialogTitle>Submit leave request</DialogTitle>
             <DialogDescription>
-              Select an employee and leave type, then enter the request dates
-              and duration.
+              Select an employee and leave type, then enter the request dates.
+              The duration is calculated from the dates.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveLeave} className="space-y-4">
@@ -1133,20 +1136,14 @@ export default function LeavesPage() {
               <Label htmlFor="leave-duration">Duration (days)</Label>
               <Input
                 id="leave-duration"
-                type="number"
-                required
-                min="0.01"
-                max="999.99"
-                step="0.01"
-                value={form.durationDays}
-                onChange={(event) =>
-                  setForm({ ...form, durationDays: event.target.value })
-                }
-                placeholder="Enter duration based on your leave policy"
+                readOnly
+                value={countDays(form.startDate, form.endDate) || ""}
+                placeholder="Calculated from the dates"
+                className="bg-muted"
               />
               <p className="text-xs text-muted-foreground">
-                Enter the duration explicitly. Working days and holidays are not
-                calculated automatically.
+                Calculated automatically from the start and end dates, counting
+                both days. Working days and holidays are not excluded.
               </p>
             </div>
             <div className="space-y-2">

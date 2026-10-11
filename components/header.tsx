@@ -91,7 +91,16 @@ export function Header() {
       <header className="z-10 h-16 w-full shrink-0 border-b bg-background">
         <div className="mx-auto flex h-full w-full items-center justify-between px-5">
           <div className="flex items-center gap-2">
-            {showSidebar && <SidebarTrigger title="Toggle navigation" />}
+            {showSidebar &&
+              (authLoading ? (
+                <Skeleton
+                  className="size-8 rounded-[min(var(--radius-md),10px)]"
+                  role="status"
+                  aria-label="Loading navigation trigger"
+                />
+              ) : (
+                <SidebarTrigger title="Toggle navigation" />
+              ))}
             {showSidebar && breadcrumb && authLoading && (
               <div
                 className="hidden items-center gap-2 sm:flex"
@@ -99,10 +108,7 @@ export function Header() {
                 aria-label="Loading breadcrumb"
               >
                 <Skeleton className="h-4 w-20" />
-                <ChevronRight
-                  aria-hidden="true"
-                  className="size-4 text-muted-foreground"
-                />
+                <Skeleton className="size-4 rounded-sm" />
                 <Skeleton className="h-4 w-24" />
               </div>
             )}
@@ -136,11 +142,19 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-3">
-            <AnimatedThemeToggler
-              theme={resolvedTheme === "dark" ? "dark" : "light"}
-              onThemeChange={(newTheme) => setTheme(newTheme)}
-              variant="circle"
-            />
+            {authLoading ? (
+              <Skeleton
+                className="size-9 rounded-md"
+                role="status"
+                aria-label="Loading theme toggle"
+              />
+            ) : (
+              <AnimatedThemeToggler
+                theme={resolvedTheme === "dark" ? "dark" : "light"}
+                onThemeChange={(newTheme) => setTheme(newTheme)}
+                variant="circle"
+              />
+            )}
 
             {showSidebar &&
               (authLoading ? (

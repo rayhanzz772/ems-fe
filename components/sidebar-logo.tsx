@@ -38,11 +38,11 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
       </div>
       <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center gap-1.5">
-          <span className="text-sm font-bold tracking-tight text-foreground">
+          <span className="text-sm font-medium tracking-tight text-foreground">
             EMS
           </span>
         </div>
-        <span className="truncate text-[11px] font-medium text-muted-foreground">
+        <span className="truncate text-[11px] font-normal text-muted-foreground">
           Employee Management System
         </span>
       </div>

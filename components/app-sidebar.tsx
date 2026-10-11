@@ -14,6 +14,7 @@ import {
   FileCodeCorner,
   KeyRound,
   type LucideIcon,
+  ChevronRight,
 } from "lucide-react";
 import {
   Sidebar,
@@ -265,8 +266,8 @@ export function AppSidebar() {
                           <span className="flex-1 truncate">{item.title}</span>
 
                           {active && !item.badge && (
-                            <span
-                              className="ml-auto size-1.5 rounded-full bg-primary shrink-0 group-data-[collapsible=icon]:hidden shadow-xs"
+                            <ChevronRight
+                              className="ml-auto size-4 shrink-0 group-data-[collapsible=icon]:hidden"
                               aria-hidden="true"
                             />
                           )}
@@ -319,8 +320,8 @@ export function AppSidebar() {
                   {user?.role && (
                     <span
                       className={cn(
-                        "rounded px-1.5 py-0.2 text-[9px] font-bold tracking-wide uppercase",
-                        user.role === "ADMIN"
+                        "rounded px-1.5 py-0.2 text-[9px] font-normal tracking-wide uppercase",
+                        user.role === "ADMIN" 
                           ? "bg-primary/10 text-primary ring-1 ring-primary/20"
                           : "bg-muted text-sidebar-foreground ring-1 ring-border",
                       )}

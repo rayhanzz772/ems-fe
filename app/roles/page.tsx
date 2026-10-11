@@ -90,7 +90,8 @@ function normalizeRole(role: RoleApi): Role {
 }
 
 function isAdminRole(role: Role | null) {
-  return role?.name.trim().toUpperCase() === "ADMIN";
+  const name = role?.name?.trim().replace(/\s+/g, " ").toUpperCase() ?? "";
+  return name === "ADMIN";
 }
 
 function normalizePermission(permission: {
@@ -396,6 +397,7 @@ export default function RolesPage() {
   }
 
   async function toggleStatus(role: Role, status: boolean) {
+    if (isAdminRole(role)) return;
     if (!can("role.update")) return;
 
     setUpdatingStatusId(role.id);
@@ -515,90 +517,97 @@ export default function RolesPage() {
                     </TableRow>
                   ))}
                 {!loading &&
-                  roles.map((role, index) => (
-                    <TableRow key={role.id}>
-                      <TableCell className="text-muted-foreground">
-                        {(currentPage - 1) * pageSize + index + 1}
-                      </TableCell>
-                      <TableCell>
-                        <button
-                          className="font-semibold hover:underline"
-                          onClick={() => void openDetail(role)}
-                        >
-                          {role.name}
-                        </button>
-                      </TableCell>
-                      <TableCell className="max-w-sm truncate text-muted-foreground">
-                        {role.description || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Switch
-                            checked={role.status}
-                            disabled={
-                              !can("role.update") ||
-                              isAdminRole(role) ||
-                              updatingStatusId === role.id
-                            }
-                            onCheckedChange={(status) =>
-                              void toggleStatus(role, status)
-                            }
-                            aria-label={`Set ${role.name} ${
-                              role.status ? "inactive" : "active"
-                            }`}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          {can("role.update") && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              title="View role"
-                              onClick={() => void openDetail(role)}
-                            >
-                              <Eye />
-                            </Button>
-                          )}
-                          {can("role.permission.assign") && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Manage permissions"
-                              disabled={isAdminRole(role)}
-                              onClick={() => void openPermissionEditor(role)}
-                            >
-                              <KeyRound />
-                            </Button>
-                          )}
-                          {can("role.update") && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Edit role"
-                              disabled={isAdminRole(role)}
-                              onClick={() => openEdit(role)}
-                            >
-                              <Pencil />
-                            </Button>
-                          )}
-                          {can("role.delete") && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Delete role"
-                              className="text-destructive hover:text-destructive"
-                              disabled={isAdminRole(role)}
-                              onClick={() => setDeleteTarget(role)}
-                            >
-                              <Trash2 />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  roles.map((role, index) => {
+                    const adminLocked = isAdminRole(role);
+                    return (
+                      <TableRow key={role.id}>
+                        <TableCell className="text-muted-foreground">
+                          {(currentPage - 1) * pageSize + index + 1}
+                        </TableCell>
+                        <TableCell>
+                          <button
+                            className="font-semibold hover:underline"
+                            onClick={() => void openDetail(role)}
+                          >
+                            {role.name}
+                          </button>
+                        </TableCell>
+                        <TableCell className="max-w-sm truncate text-muted-foreground">
+                          {role.description || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              checked={role.status}
+                              disabled={
+                                adminLocked ||
+                                !can("role.update") ||
+                                updatingStatusId === role.id
+                              }
+                              onCheckedChange={(status) =>
+                                void toggleStatus(role, status)
+                              }
+                              aria-label={
+                                adminLocked
+                                  ? `${role.name} status cannot be changed`
+                                  : `Set ${role.name} ${
+                                      role.status ? "inactive" : "active"
+                                    }`
+                              }
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-1">
+                            {can("role.update") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                title="View role"
+                                onClick={() => void openDetail(role)}
+                              >
+                                <Eye />
+                              </Button>
+                            )}
+                            {can("role.permission.assign") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                title="Manage permissions"
+                                disabled={isAdminRole(role)}
+                                onClick={() => void openPermissionEditor(role)}
+                              >
+                                <KeyRound />
+                              </Button>
+                            )}
+                            {can("role.update") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                title="Edit role"
+                                disabled={isAdminRole(role)}
+                                onClick={() => openEdit(role)}
+                              >
+                                <Pencil />
+                              </Button>
+                            )}
+                            {can("role.delete") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                title="Delete role"
+                                className="text-destructive hover:text-destructive"
+                                disabled={isAdminRole(role)}
+                                onClick={() => setDeleteTarget(role)}
+                              >
+                                <Trash2 />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 {!loading && !roles.length && (
                   <TableRow>
                     <TableCell

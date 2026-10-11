@@ -274,7 +274,7 @@ function formatDate(date: string) {
 
   if (Number.isNaN(parsedDate.getTime())) return "—";
 
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",

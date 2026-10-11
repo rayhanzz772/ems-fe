@@ -154,7 +154,7 @@ function getCalendarRange(days: Date[]) {
 }
 
 function formatMonth(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "long",
     year: "numeric",
   }).format(date);
@@ -167,7 +167,7 @@ function formatDate(
   const date = dateFromKey(value);
   return Number.isNaN(date.getTime())
     ? value
-    : new Intl.DateTimeFormat("id-ID", options).format(date);
+    : new Intl.DateTimeFormat("en-US", options).format(date);
 }
 
 function fullName(person?: PersonSummary | null) {
@@ -934,7 +934,7 @@ export default function LeavesPage() {
                       value={
                         selectedRequest.decidedAt
                           ? new Date(selectedRequest.decidedAt).toLocaleString(
-                              "id-ID",
+                              "d",
                             )
                           : "Not decided"
                       }

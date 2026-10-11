@@ -400,7 +400,7 @@ function SidebarGroupLabel({
     props: mergeProps<"div">(
       {
         className: cn(
-          "flex h-7 shrink-0 items-center rounded-md px-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/75 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+          "flex h-7 shrink-0 items-center rounded-md px-2.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/75 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
           className,
         ),
       },
@@ -475,18 +475,18 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-2 text-left text-sm font-medium ring-sidebar-ring outline-hidden transition-all duration-150 group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-colors [&>span:last-child]:truncate",
+  "peer/menu-button group/menu-button relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg px-2.5 py-2 text-left text-sm font-normal ring-sidebar-ring outline-hidden transition-all duration-150 group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-colors [&>span:last-child]:truncate",
   {
     variants: {
       variant: {
         default:
-          "text-muted-foreground hover:bg-muted/50 hover:text-foreground data-active:bg-muted/80 data-active:text-primary data-active:font-medium [&_svg]:text-muted-foreground data-active:[&_svg]:text-primary",
+          "text-sidebar-foreground hover:bg-muted/50 data-active:bg-muted/80 data-active:text-primary [&_svg]:text-sidebar-foreground data-active:[&_svg]:text-primary",
 
         subtle:
-          "text-muted-foreground hover:bg-muted/50 hover:text-foreground data-active:bg-primary/5 data-active:text-primary data-active:font-medium [&_svg]:text-muted-foreground data-active:[&_svg]:text-primary",
+          "text-sidebar-foreground hover:bg-muted/50 data-active:bg-primary/5 data-active:text-primary [&_svg]:text-sidebar-foreground data-active:[&_svg]:text-primary",
 
         outline:
-          "text-muted-foreground hover:bg-muted/50 hover:text-foreground data-active:text-primary data-active:font-medium [&_svg]:text-muted-foreground data-active:[&_svg]:text-primary",
+          "text-sidebar-foreground hover:bg-muted/50 data-active:text-primary [&_svg]:text-sidebar-foreground data-active:[&_svg]:text-primary",
       },
       size: {
         default: "h-9 text-sm",
@@ -595,7 +595,7 @@ function SidebarMenuBadge({
       data-slot="sidebar-menu-badge"
       data-sidebar="menu-badge"
       className={cn(
-        "pointer-events-none absolute right-2 flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[10px] font-semibold text-muted-foreground/80 tabular-nums select-none group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-foreground peer-data-[size=default]/menu-button:top-2 peer-data-[size=lg]/menu-button:top-3 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:bg-primary-foreground/20 peer-data-active/menu-button:text-primary-foreground peer-data-active/menu-button:font-bold transition-colors",
+        "pointer-events-none absolute right-2 flex h-5 min-w-5 items-center justify-center rounded px-1.5 text-[10px] font-semibold text-sidebar-foreground/80 tabular-nums select-none group-data-[collapsible=icon]:hidden peer-hover/menu-button:text-sidebar-foreground peer-data-[size=default]/menu-button:top-2 peer-data-[size=lg]/menu-button:top-3 peer-data-[size=sm]/menu-button:top-1 peer-data-active/menu-button:bg-primary-foreground/20 peer-data-active/menu-button:text-primary-foreground peer-data-active/menu-button:font-bold transition-colors",
         className,
       )}
       {...props}

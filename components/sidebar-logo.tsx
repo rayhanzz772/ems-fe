@@ -10,7 +10,7 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
   return (
     <Link
       href="/dashboard"
-      aria-label="Morrow home"
+      aria-label="Employee Management System"
       className={cn(
         "group/logo flex w-full items-center gap-3 rounded-lg py-1.5",
         className,
@@ -19,7 +19,7 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
       <div className="relative flex size-8 shrink-0 items-center justify-center">
         <Image
           src="/assets/logo/logo-dark.png"
-          alt="Morrow"
+          alt="Employee Management System"
           width={768}
           height={796}
           sizes="32px"
@@ -28,7 +28,7 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
         />
         <Image
           src="/assets/logo/logo-white.png"
-          alt="Morrow"
+          alt="Employee Management System"
           width={768}
           height={796}
           sizes="32px"
@@ -39,7 +39,7 @@ export function SidebarLogo({ className }: SidebarLogoProps) {
       <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-bold tracking-tight text-foreground">
-            Morrow
+            EMS
           </span>
         </div>
         <span className="truncate text-[11px] font-medium text-muted-foreground">

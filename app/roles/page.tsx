@@ -186,11 +186,25 @@ export default function RolesPage() {
   );
   const [permissionsLoading, setPermissionsLoading] = useState(false);
   const [permissionsSaving, setPermissionsSaving] = useState(false);
+  const [permissionQuery, setPermissionQuery] = useState("");
   const pageSize = 10;
+
+  const filteredPermissions = useMemo(() => {
+    const q = permissionQuery.trim().toLowerCase();
+    if (!q) return permissions;
+    return permissions.filter((permission) =>
+      [
+        permission.key,
+        permission.resource,
+        permission.action,
+        permission.description,
+      ].some((field) => field?.toLowerCase().includes(q)),
+    );
+  }, [permissions, permissionQuery]);
 
   const permissionGroups = useMemo(() => {
     const groups = new Map<string, Permission[]>();
-    for (const permission of permissions) {
+    for (const permission of filteredPermissions) {
       const resource = permission.resource || "general";
       const bucket = groups.get(resource);
       if (bucket) bucket.push(permission);
@@ -200,7 +214,7 @@ export default function RolesPage() {
       resource,
       permissions: items,
     })).sort((left, right) => left.resource.localeCompare(right.resource));
-  }, [permissions]);
+  }, [filteredPermissions]);
 
   const rolesQuery = useQuery({
     queryKey: ["roles", page, query, sortAsc],
@@ -270,6 +284,7 @@ export default function RolesPage() {
       return;
     }
     setPermissionTarget(role);
+    setPermissionQuery("");
     setPermissionsLoading(true);
     try {
       const [catalogResponse, assignedResponse] = await Promise.all([
@@ -705,9 +720,12 @@ export default function RolesPage() {
 
       <Dialog
         open={Boolean(permissionTarget)}
-        onOpenChange={(open) =>
-          !open && !permissionsSaving && setPermissionTarget(null)
-        }
+        onOpenChange={(open) => {
+          if (!open && !permissionsSaving) {
+            setPermissionTarget(null);
+            setPermissionQuery("");
+          }
+        }}
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
@@ -716,11 +734,27 @@ export default function RolesPage() {
               Select the permissions granted to {permissionTarget?.name}.
             </DialogDescription>
           </DialogHeader>
+          {!permissionsLoading && permissions.length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={permissionQuery}
+                onChange={(event) => setPermissionQuery(event.target.value)}
+                placeholder="Search permissions..."
+                className="pl-9"
+                aria-label="Search permissions"
+              />
+            </div>
+          )}
           {permissionsLoading ? (
             <Skeleton className="h-48 w-full" />
           ) : permissions.length === 0 ? (
             <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
               No permissions are available in the permission catalog.
+            </p>
+          ) : permissionGroups.length === 0 ? (
+            <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+              No permissions match {`"${permissionQuery.trim()}"`}.
             </p>
           ) : (
             <div className="max-h-[55vh] space-y-5 overflow-y-auto pr-1">

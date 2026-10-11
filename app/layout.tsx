@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Morrow | Employee Management System",
-  description: "Sign in or create your Morrow account.",
+  title: "Employee Management System",
+  description: "Sign in or create your Employee Management System account.",
   icons: {
     icon: "/assets/logo/logo-dark.png",
   },

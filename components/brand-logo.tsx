@@ -10,7 +10,7 @@ export function BrandLogo({ className }: BrandLogoProps) {
   return (
     <Link
       href="/login"
-      aria-label="Morrow home"
+      aria-label="Employee Management System"
       className={cn(
         "inline-flex items-center gap-2.5 font-semibold tracking-tight",
         className,
@@ -19,7 +19,7 @@ export function BrandLogo({ className }: BrandLogoProps) {
       <div className="relative h-6 w-6 flex">
         <Image
           src="/assets/logo/logo-dark.png"
-          alt="Morrow"
+          alt="Employee Management System"
           width={768}
           height={796}
           sizes="32px"

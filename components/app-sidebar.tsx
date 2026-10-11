@@ -250,7 +250,7 @@ export function AppSidebar() {
                           tooltip={item.title}
                           className={cn(
                             "relative group/btn transition-all duration-150",
-                            active && "font-semibold",
+                            active && "font-normal",
                           )}
                         >
                           <Icon
@@ -259,7 +259,7 @@ export function AppSidebar() {
                               "size-4 shrink-0 transition-all duration-150 group-hover/btn:scale-105",
                               active
                                 ? "text-primary"
-                                : "text-muted-foreground group-hover/btn:text-foreground",
+                                : "text-sidebar-foreground/80 group-hover/btn:text-sidebar-foreground",
                             )}
                           />
                           <span className="flex-1 truncate">{item.title}</span>
@@ -278,7 +278,7 @@ export function AppSidebar() {
                               "transition-colors",
                               active
                                 ? "bg-primary/10 text-primary"
-                                : "bg-muted text-muted-foreground border border-border/50",
+                                : "bg-muted text-sidebar-foreground border border-border/50",
                             )}
                           >
                             {item.badge}
@@ -313,7 +313,7 @@ export function AppSidebar() {
               </div>
               <div className="flex min-w-0 flex-1 flex-col group-data-[collapsible=icon]:hidden">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="truncate text-xs font-semibold text-foreground">
+                  <span className="truncate text-xs font-semibold text-sidebar-foreground">
                     {userDisplayName}
                   </span>
                   {user?.role && (
@@ -322,7 +322,7 @@ export function AppSidebar() {
                         "rounded px-1.5 py-0.2 text-[9px] font-bold tracking-wide uppercase",
                         user.role === "ADMIN"
                           ? "bg-primary/10 text-primary ring-1 ring-primary/20"
-                          : "bg-muted text-muted-foreground ring-1 ring-border",
+                          : "bg-muted text-sidebar-foreground ring-1 ring-border",
                       )}
                     >
                       {user.role}

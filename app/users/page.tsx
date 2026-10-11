@@ -276,6 +276,7 @@ export default function UsersPage() {
       };
       if (form.password) payload.password = form.password;
       if (editing) {
+        if (statusLocked) payload.status = editing.status;
         await api.put(`/users/${editing.id}/update`, payload);
       } else {
         await api.post("/users/create", payload);
@@ -374,6 +375,14 @@ export default function UsersPage() {
       </main>
     );
   }
+
+  const isEditingAdmin = editing?.role?.toUpperCase() === "ADMIN";
+  const isEditingSelf = Boolean(
+    editing &&
+      (editing.id === currentUserId ||
+        editing.email.toLowerCase() === currentUserEmail),
+  );
+  const statusLocked = isEditingAdmin || isEditingSelf;
 
   return (
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
@@ -844,16 +853,31 @@ export default function UsersPage() {
                 )}
               </select>
             </div>
-            <label className="flex items-center gap-2 text-sm">
+            <label
+              className={`flex items-center gap-2 text-sm${
+                statusLocked ? " cursor-not-allowed opacity-60" : ""
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={form.status}
+                disabled={statusLocked}
                 onChange={(event) =>
                   setForm({ ...form, status: event.target.checked })
                 }
-                className="size-4 accent-primary"
+                className="size-4 accent-primary disabled:cursor-not-allowed"
               />{" "}
               Active account
+              {isEditingAdmin && (
+                <span className="font-normal text-muted-foreground">
+                  (admin account always active)
+                </span>
+              )}
+              {!isEditingAdmin && isEditingSelf && (
+                <span className="font-normal text-muted-foreground">
+                  (you cannot deactivate your own account)
+                </span>
+              )}
             </label>
             <DialogFooter>
               <DialogClose

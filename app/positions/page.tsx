@@ -5,19 +5,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
-  BriefcaseBusiness,
   Eye,
   Pencil,
   Plus,
   Search,
   Trash2,
 } from "lucide-react";
-import {
-  ApiError,
-  api,
-  getPaginationTotal,
-  type ApiResponse,
-} from "@/lib/api";
+import { ApiError, api, getPaginationTotal, type ApiResponse } from "@/lib/api";
 import {
   Button,
   Card,
@@ -182,9 +176,9 @@ export default function PositionPage() {
   async function openDetail(position: Position) {
     setActionError("");
     try {
-      const response = await api.get<
-        ApiResponse<PositionApi | PositionApi[]>
-      >(`/positions/${encodeURIComponent(position.id)}/detail`);
+      const response = await api.get<ApiResponse<PositionApi | PositionApi[]>>(
+        `/positions/${encodeURIComponent(position.id)}/detail`,
+      );
       const detail = Array.isArray(response.data)
         ? response.data[0]
         : response.data;
@@ -403,9 +397,6 @@ export default function PositionPage() {
                         className="flex items-center gap-3 text-left"
                         onClick={() => void openDetail(position)}
                       >
-                        <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <BriefcaseBusiness className="size-4" />
-                        </span>
                         <span className="font-medium hover:underline">
                           {position.name}
                         </span>
@@ -539,9 +530,6 @@ export default function PositionPage() {
           {selected && (
             <div className="space-y-5">
               <div className="flex items-center gap-3">
-                <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <BriefcaseBusiness className="size-5" />
-                </span>
                 <div>
                   <p className="font-semibold">{selected.name}</p>
                   <p className="text-sm text-muted-foreground">
@@ -604,9 +592,7 @@ export default function PositionPage() {
 
       <Dialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) =>
-          !open && !deleting && setDeleteTarget(null)
-        }
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
       >
         <DialogContent>
           <DialogHeader>
@@ -695,9 +681,7 @@ export default function PositionPage() {
             </div>
             <DialogFooter>
               <DialogClose
-                render={
-                  <Button variant="outline" disabled={savingPosition} />
-                }
+                render={<Button variant="outline" disabled={savingPosition} />}
               >
                 Cancel
               </DialogClose>

@@ -63,13 +63,14 @@ type User = {
   id: string;
   email: string;
   role: UserRole;
+  role_id?: string | number;
   status: boolean;
   created_at?: string;
 };
 type UserForm = {
   email: string;
   password: string;
-  role: UserRole;
+  roleId: string;
   status: boolean;
 };
 type UserListPayload = {
@@ -82,16 +83,38 @@ type UserListPayload = {
   per_page?: number;
   last_page?: number;
 };
+type RoleRecord = {
+  id?: string | number;
+  role_id?: string | number;
+  name?: string;
+  role_name?: string;
+  label?: string;
+};
+type RoleOption = { id: string; name: string };
 type RoleListData =
-  | Array<{ name: string }>
-  | { items?: Array<{ name: string }>; roles?: Array<{ name: string }> };
+  RoleRecord[] | { items?: RoleRecord[]; roles?: RoleRecord[] };
 
 const emptyForm: UserForm = {
   email: "",
   password: "",
-  role: "HR",
+  roleId: "",
   status: true,
 };
+
+function normalizeRoleOption(role: RoleRecord): RoleOption | null {
+  const id = role.id ?? role.role_id;
+  const name = role.name ?? role.role_name ?? role.label;
+  if (id === undefined || id === null || !name) return null;
+  return { id: String(id), name: String(name) };
+}
+
+function getRoleItems(data: RoleListData): RoleRecord[] {
+  return Array.isArray(data) ? data : (data.items ?? data.roles ?? []);
+}
+
+function toRoleId(value: string) {
+  return /^\d+$/.test(value) ? Number(value) : value;
+}
 
 const avatarColors = [
   "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -172,10 +195,10 @@ export default function UsersPage() {
       const response = await api.get<ApiResponse<RoleListData>>(
         "/users/get-all-roles",
       );
-      const roles = Array.isArray(response.data)
-        ? response.data
-        : (response.data.items ?? response.data.roles ?? []);
-      return roles.map((role) => role.name.trim()).filter(Boolean);
+      const roles = getRoleItems(response.data)
+        .map(normalizeRoleOption)
+        .filter((role): role is RoleOption => role !== null);
+      return Array.from(new Map(roles.map((role) => [role.id, role])).values());
     },
   });
 
@@ -236,12 +259,22 @@ export default function UsersPage() {
     setPage(1);
   }
 
+  function resolveRoleId(user: User) {
+    if (user.role_id !== undefined && user.role_id !== null) {
+      return String(user.role_id);
+    }
+    const match = availableRoles.find(
+      (role) => role.name.toLowerCase() === user.role?.toLowerCase(),
+    );
+    return match?.id ?? "";
+  }
+
   function openCreate() {
     if (!can("user.create")) return;
     setEditing(null);
     setForm({
       ...emptyForm,
-      role: availableRoles[0] ?? emptyForm.role,
+      roleId: availableRoles[0]?.id ?? "",
     });
     setActionError("");
     setFormOpen(true);
@@ -252,7 +285,7 @@ export default function UsersPage() {
     setForm({
       email: user.email,
       password: "",
-      role: user.role,
+      roleId: resolveRoleId(user),
       status: user.status,
     });
     setActionError("");
@@ -267,11 +300,17 @@ export default function UsersPage() {
       setActionError("You do not have permission to create users.");
       return;
     }
+    const selectedRole = availableRoles.find((role) => role.id === form.roleId);
+    if (!selectedRole) {
+      setActionError("Select a role for this user.");
+      showError("Unable to save user", "Select a role for this user.");
+      return;
+    }
     setSavingUser(true);
     try {
-      const payload: Record<string, string | boolean> = {
-        email: form.email,
-        role: form.role,
+      const payload: Record<string, string | number | boolean> = {
+        email: form.email.trim(),
+        role_id: toRoleId(selectedRole.id),
         status: form.status,
       };
       if (form.password) payload.password = form.password;
@@ -379,8 +418,8 @@ export default function UsersPage() {
   const isEditingAdmin = editing?.role?.toUpperCase() === "ADMIN";
   const isEditingSelf = Boolean(
     editing &&
-      (editing.id === currentUserId ||
-        editing.email.toLowerCase() === currentUserEmail),
+    (editing.id === currentUserId ||
+      editing.email.toLowerCase() === currentUserEmail),
   );
   const statusLocked = isEditingAdmin || isEditingSelf;
 
@@ -640,8 +679,8 @@ export default function UsersPage() {
               >
                 <option value="all">All roles</option>
                 {availableRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
+                  <option key={role.id} value={role.name}>
+                    {role.name}
                   </option>
                 ))}
               </select>
@@ -832,9 +871,9 @@ export default function UsersPage() {
               <Label htmlFor="user-role">Role</Label>
               <select
                 id="user-role"
-                value={form.role}
+                value={form.roleId}
                 onChange={(event) =>
-                  setForm({ ...form, role: event.target.value })
+                  setForm({ ...form, roleId: event.target.value })
                 }
                 disabled={rolesLoading}
                 className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
@@ -844,13 +883,16 @@ export default function UsersPage() {
                   <option value="">No roles available</option>
                 )}
                 {availableRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
+                  <option key={role.id} value={role.id}>
+                    {role.name}
                   </option>
                 ))}
-                {form.role && !availableRoles.includes(form.role) && (
-                  <option value={form.role}>{form.role}</option>
-                )}
+                {form.roleId &&
+                  !availableRoles.some((role) => role.id === form.roleId) && (
+                    <option value={form.roleId}>
+                      {editing?.role ?? form.roleId}
+                    </option>
+                  )}
               </select>
             </div>
             <label

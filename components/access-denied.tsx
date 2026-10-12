@@ -4,7 +4,7 @@ export function AccessDenied() {
   return (
     <main className="grid min-h-[70vh] place-items-center p-5 text-center md:p-8">
       <div className="space-y-3">
-        <p className="flex items-center justify-center text-9xl leading-none font-medium tracking-tighter text-primary select-none sm:text-8xl lg:text-9xl xl:text-[18rem]">
+        <p className="flex items-center justify-center text-9xl leading-none font-medium tracking-tighter text-primary select-none sm:text-[10rem] md:text-[12rem] lg:text-[18rem] xl:text-[18rem]">
           <span>4</span>
           <Image
             src="/assets/images/padlock.png"
@@ -15,7 +15,7 @@ export function AccessDenied() {
             sizes="14rem"
             className="h-[0.82em] w-auto object-contain"
           />
-          <span className="xl:-ml-[2rem] lg:-ml-[1rem] -z-10 sm:-ml-[0.5rem] ">
+          <span className="xl:-ml-[2rem] lg:-ml-[1.4rem] -z-10 sm:-ml-[1rem] md:-ml-[1rem] -ml-[0.8rem]">
             3
           </span>
         </p>

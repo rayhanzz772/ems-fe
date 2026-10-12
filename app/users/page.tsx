@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDown,
@@ -54,7 +54,6 @@ import { AccessDenied } from "@/components/access-denied";
 import {
   ApiError,
   api,
-  getMe,
   getPaginationTotal,
   type ApiResponse,
 } from "@/lib/api";
@@ -84,6 +83,7 @@ type UserListPayload = {
   per_page?: number;
   last_page?: number;
 };
+type UserListData = { users: User[]; total: number };
 type RoleRecord = {
   id?: string | number;
   role_id?: string | number;
@@ -166,7 +166,7 @@ function getListData(response: ApiResponse<User[] | UserListPayload>) {
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
-  const { can, loading: authLoading } = useAuth();
+  const { can, loading: authLoading, user: currentUser } = useAuth();
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -180,14 +180,20 @@ export default function UsersPage() {
   const [updatingStatusIds, setUpdatingStatusIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [, setActionError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const pageSize = 10;
   const sortOrder = sortAsc ? "ASC" : "DESC";
+  const usersQueryKey = [
+    "users",
+    page,
+    query,
+    roleFilter,
+    statusFilter,
+    sortOrder,
+  ];
 
   const rolesQuery = useQuery({
     queryKey: ["available-roles"],
@@ -205,7 +211,7 @@ export default function UsersPage() {
 
   const usersQuery = useQuery({
     enabled: !authLoading && can("user.read"),
-    queryKey: ["users", page, query, roleFilter, statusFilter, sortOrder],
+    queryKey: usersQueryKey,
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
@@ -227,6 +233,8 @@ export default function UsersPage() {
 
   const users = usersQuery.data?.users ?? [];
   const total = usersQuery.data?.total ?? 0;
+  const currentUserId = currentUser?.id ?? null;
+  const currentUserEmail = currentUser?.email.toLowerCase() ?? null;
   const loading = usersQuery.isLoading;
   const error = usersQuery.error
     ? usersQuery.error instanceof ApiError
@@ -235,22 +243,6 @@ export default function UsersPage() {
     : "";
   const availableRoles = rolesQuery.data ?? [];
   const rolesLoading = rolesQuery.isLoading;
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void getMe()
-        .then((user) => {
-          setCurrentUserId(user.id);
-          setCurrentUserEmail(user.email.toLowerCase());
-        })
-        .catch(() => {
-          setCurrentUserId(null);
-          setCurrentUserEmail(null);
-        });
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, []);
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -351,6 +343,17 @@ export default function UsersPage() {
     }
 
     setUpdatingStatusIds((current) => new Set(current).add(user.id));
+    const previous = queryClient.getQueryData<UserListData>(usersQueryKey);
+    queryClient.setQueryData<UserListData>(usersQueryKey, (current) =>
+      current
+        ? {
+            ...current,
+            users: current.users.map((item) =>
+              item.id === user.id ? { ...item, status: nextStatus } : item,
+            ),
+          }
+        : current,
+    );
     try {
       await api.patch(`/users/${user.id}/status`, { status: nextStatus });
       await queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -358,6 +361,7 @@ export default function UsersPage() {
       if (selected?.id === user.id)
         setSelected({ ...user, status: nextStatus });
     } catch (requestError) {
+      if (previous) queryClient.setQueryData(usersQueryKey, previous);
       setActionError(
         requestError instanceof ApiError
           ? requestError.message

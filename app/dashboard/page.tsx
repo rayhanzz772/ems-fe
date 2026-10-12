@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -16,16 +17,6 @@ import {
   Users,
 } from "lucide-react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
   Button,
   Card,
   CardContent,
@@ -33,10 +24,6 @@ import {
   CardHeader,
   CardTitle,
   Skeleton,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui";
 import {
   ApiError,
@@ -47,29 +34,34 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/access-denied";
 
-const departmentConfig = {
-  employees: { label: "Employees", color: "var(--chart-1)" },
-} satisfies ChartConfig;
+function ChartFallback() {
+  return <Skeleton className="h-[280px] w-full rounded-xl" />;
+}
 
-const statusConfig = {
-  active: { label: "Active", color: "rgba(36, 188, 92, 0.8)" },
-  inactive: { label: "Inactive", color: "rgba(249, 115, 22, 0.8)" },
-} satisfies ChartConfig;
+const DepartmentChart = dynamic(
+  () => import("./charts").then((mod) => mod.DepartmentChart),
+  { ssr: false, loading: ChartFallback },
+);
 
-const branchConfig = {
-  employees: { label: "Employees", color: "var(--chart-2)" },
-} satisfies ChartConfig;
+const EmployeeStatusChart = dynamic(
+  () => import("./charts").then((mod) => mod.EmployeeStatusChart),
+  { ssr: false, loading: ChartFallback },
+);
 
-const leaveStatusConfig = {
-  pending: { label: "Pending", color: "rgba(245, 158, 11, 0.8)" },
-  approved: { label: "Approved", color: "rgba(36, 188, 92, 0.8)" },
-  rejected: { label: "Rejected", color: "rgba(239, 68, 68, 0.8)" },
-  cancelled: { label: "Cancelled", color: "rgba(100, 116, 139, 0.8)" },
-} satisfies ChartConfig;
+const BranchChart = dynamic(
+  () => import("./charts").then((mod) => mod.BranchChart),
+  { ssr: false, loading: ChartFallback },
+);
 
-const leaveTypeConfig = {
-  days: { label: "Days", color: "var(--chart-1)" },
-} satisfies ChartConfig;
+const LeaveStatusChart = dynamic(
+  () => import("./charts").then((mod) => mod.LeaveStatusChart),
+  { ssr: false, loading: ChartFallback },
+);
+
+const LeaveTypeChart = dynamic(
+  () => import("./charts").then((mod) => mod.LeaveTypeChart),
+  { ssr: false, loading: ChartFallback },
+);
 
 const departmentColors = [
   "rgba(37, 99, 235, 0.8)",
@@ -80,16 +72,20 @@ const departmentColors = [
   "rgba(202, 138, 4, 0.8)",
 ];
 
+const activityDateFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
 function formatActivityDate(date: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(date));
+  return activityDateFormatter.format(new Date(date));
 }
 
 function activityLabel(action: string, entity: string) {
   return `${action.charAt(0)}${action.slice(1).toLowerCase()} ${entity.toLowerCase()}`;
 }
+
+const dateKeyFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function formatDateKey(
   value: string,
@@ -97,9 +93,15 @@ function formatDateKey(
 ) {
   const [year, month, day] = value.split("-").map(Number);
   const date = new Date(year, month - 1, day);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-US", options).format(date);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const key = JSON.stringify(options);
+  let formatter = dateKeyFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", options);
+    dateKeyFormatters.set(key, formatter);
+  }
+  return formatter.format(date);
 }
 
 function formatDateRange(startDate: string, endDate: string) {
@@ -309,33 +311,7 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={departmentConfig}
-              className="h-[280px] w-full"
-            >
-              <BarChart
-                data={departmentData}
-                margin={{ left: 4, right: 12, top: 12 }}
-              >
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                />
-                <YAxis tickLine={false} axisLine={false} width={30} />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="line" />}
-                />
-                <Bar dataKey="employees" radius={[5, 5, 0, 0]}>
-                  {departmentData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
+            <DepartmentChart data={departmentData} />
           </CardContent>
         </Card>
         <Card>
@@ -344,29 +320,7 @@ export default function DashboardPage() {
             <CardDescription>Active versus inactive employees.</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={statusConfig}
-              className="mx-auto h-[280px] w-full max-w-[360px]"
-            >
-              <PieChart>
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Pie
-                  data={statusData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={72}
-                  outerRadius={104}
-                  strokeWidth={4}
-                >
-                  {statusData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ChartContainer>
+            <EmployeeStatusChart data={statusData} />
             <div className="flex justify-center gap-6 text-sm">
               <span className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-[#22c55e]" />
@@ -391,33 +345,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {branchData.length ? (
-              <ChartContainer
-                config={branchConfig}
-                className="h-[280px] w-full"
-              >
-                <BarChart
-                  data={branchData}
-                  margin={{ left: 4, right: 12, top: 12 }}
-                >
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="name"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis tickLine={false} axisLine={false} width={30} />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="line" />}
-                  />
-                  <Bar dataKey="employees" radius={[5, 5, 0, 0]}>
-                    {branchData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
+              <BranchChart data={branchData} />
             ) : (
               <EmptyState message="No branch data yet." />
             )}
@@ -433,29 +361,7 @@ export default function DashboardPage() {
           <CardContent>
             {dashboard.leave_status.total ? (
               <>
-                <ChartContainer
-                  config={leaveStatusConfig}
-                  className="mx-auto h-[280px] w-full max-w-[360px]"
-                >
-                  <PieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Pie
-                      data={leaveStatusData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={72}
-                      outerRadius={104}
-                      strokeWidth={4}
-                    >
-                      {leaveStatusData.map((entry) => (
-                        <Cell key={entry.name} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ChartContainer>
+                <LeaveStatusChart data={leaveStatusData} />
                 <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
                   {leaveStatusData.map((entry) => (
                     <span key={entry.name} className="flex items-center gap-2">
@@ -624,40 +530,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {leaveByTypeData.some((type) => type.days > 0) ? (
-              <ChartContainer
-                config={leaveTypeConfig}
-                className="h-[280px] w-full"
-              >
-                <BarChart
-                  data={leaveByTypeData}
-                  layout="vertical"
-                  margin={{ left: 8, right: 16, top: 12 }}
-                >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                  <XAxis
-                    type="number"
-                    tickLine={false}
-                    axisLine={false}
-                    allowDecimals={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tickLine={false}
-                    axisLine={false}
-                    width={120}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="line" />}
-                  />
-                  <Bar dataKey="days" radius={[0, 5, 5, 0]}>
-                    {leaveByTypeData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
+              <LeaveTypeChart data={leaveByTypeData} />
             ) : (
               <EmptyState message="No approved leave yet." />
             )}

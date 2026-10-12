@@ -6,12 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
-import {
-  Button,
-  AnimatedThemeToggler,
-  Skeleton,
-  Spinner,
-} from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { showError, showSuccess } from "@/lib/toast";

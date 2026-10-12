@@ -8,15 +8,6 @@ export {
   CardTitle,
 } from "./card";
 export {
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartStyle,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "./chart";
-export {
   Dialog,
   DialogClose,
   DialogContent,

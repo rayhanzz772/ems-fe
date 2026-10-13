@@ -147,3 +147,16 @@ body {
   animation: none;
   mix-blend-mode: normal;
 }
+
+/* Tinted chip/avatar that carries a data-driven color. The custom properties
+   come from `tintStyle()` in `lib/color.ts`, which keeps the text at 4.5:1
+   against its own tint in both themes. */
+.tint {
+  color: var(--tint-fg);
+  background-color: var(--tint-bg);
+}
+
+.dark .tint {
+  color: var(--tint-fg-dark);
+  background-color: var(--tint-bg-dark);
+}

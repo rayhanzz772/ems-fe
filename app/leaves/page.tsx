@@ -36,6 +36,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/access-denied";
 import { showError, showSuccess } from "@/lib/toast";
+import { tintStyle } from "@/lib/color";
 
 type LeaveStatus = "PENDING" | "APPROVED";
 type StatusFilter = "ALL" | LeaveStatus;
@@ -689,10 +690,10 @@ export default function LeavesPage() {
                           <span
                             key={`${dateKey}-${leave.id}`}
                             title={`${leave.employee} · ${leave.type} · ${leave.status}`}
-                            className="truncate rounded border-l-2 px-1 py-0.5 text-[10px] leading-4 sm:text-xs"
+                            className="tint truncate rounded border-l-2 px-1 py-0.5 text-[10px] leading-4 sm:text-xs"
                             style={{
                               borderLeftColor: leave.color,
-                              backgroundColor: `${leave.color}1A`,
+                              ...tintStyle(leave.color),
                             }}
                           >
                             <span className="hidden sm:inline">
@@ -871,11 +872,8 @@ export default function LeavesPage() {
                 <>
                   <div className="flex items-start gap-3">
                     <span
-                      className="flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                      style={{
-                        color: selectedRequest.color,
-                        backgroundColor: `${selectedRequest.color}1A`,
-                      }}
+                      className="tint flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                      style={tintStyle(selectedRequest.color)}
                     >
                       {eventInitials(selectedRequest.employee)}
                     </span>
@@ -1271,11 +1269,8 @@ function LeaveCard({
       className="flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/40"
     >
       <span
-        className="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-        style={{
-          color: leave.color,
-          backgroundColor: `${leave.color}1A`,
-        }}
+        className="tint flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+        style={tintStyle(leave.color)}
       >
         {eventInitials(leave.employee)}
       </span>

@@ -33,6 +33,7 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/access-denied";
+import { tintStyle } from "@/lib/color";
 
 function ChartFallback() {
   return <Skeleton className="h-[280px] w-full rounded-xl" />;
@@ -643,11 +644,8 @@ function LeaveRequestRow({ leave }: { leave: DashboardLeaveEntry }) {
   return (
     <div className="flex items-start gap-3">
       <span
-        className="flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
-        style={{
-          color: leave.leave_type_color,
-          backgroundColor: `${leave.leave_type_color}1A`,
-        }}
+        className="tint flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+        style={tintStyle(leave.leave_type_color)}
       >
         {employeeInitials(leave.employee_name)}
       </span>

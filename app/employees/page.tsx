@@ -1022,7 +1022,7 @@ export default function EmployeePage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!visibleEmployees.length && (
+                {!loading && !visibleEmployees.length && (
                   <TableRow>
                     <TableCell
                       colSpan={8}

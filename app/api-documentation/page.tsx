@@ -469,10 +469,10 @@ export default function ApiDocsPage() {
     <main className="mx-auto w-full max-w-[1600px] space-y-6 p-5 md:p-8">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight">
-          {doc?.info?.title ?? "API Documentation"}
+          API Documentation
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {doc?.info?.description ?? "Explore the available API endpoints."}
+          Explore the available API endpoints.
         </p>
       </section>
       {loading && (

@@ -423,7 +423,7 @@ export default function AuditLogPage() {
                     </TableRow>
                   );
                 })}
-                {!visibleLogs.length && (
+                {!loading && !visibleLogs.length && (
                   <TableRow>
                     <TableCell
                       colSpan={5}

@@ -482,7 +482,7 @@ export default function DepartmentPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!visibleDepartments.length && (
+                {!loading && !visibleDepartments.length && (
                   <TableRow>
                     <TableCell
                       colSpan={6}

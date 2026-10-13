@@ -4,11 +4,14 @@ import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
 
-function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
+function Pagination({
+  className,
+  "aria-label": ariaLabel = "Pagination",
+  ...props
+}: React.ComponentProps<"nav">) {
   return (
     <nav
-      role="navigation"
-      aria-label="pagination"
+      aria-label={ariaLabel}
       data-slot="pagination"
       className={cn("mx-auto flex w-full justify-center", className)}
       {...props}
@@ -23,7 +26,10 @@ function PaginationContent({
   return (
     <ul
       data-slot="pagination-content"
-      className={cn("flex items-center gap-1", className)}
+      className={cn(
+        "flex flex-wrap items-center justify-center gap-1",
+        className
+      )}
       {...props}
     />
   )
@@ -35,26 +41,41 @@ function PaginationItem({ ...props }: React.ComponentProps<"li">) {
 
 type PaginationLinkProps = {
   isActive?: boolean
+  /**
+   * Renders the link as a disabled control: no `href`, removed from the tab
+   * order, and marked with `aria-disabled` so assistive tech announces it.
+   */
+  disabled?: boolean
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
   React.ComponentProps<"a">
 
 function PaginationLink({
   className,
-  isActive,
+  isActive = false,
+  disabled = false,
   size = "icon",
+  href,
+  onClick,
   ...props
 }: PaginationLinkProps) {
   return (
     <Button
       variant={isActive ? "outline" : "ghost"}
       size={size}
-      className={cn(className)}
+      disabled={disabled}
+      className={cn(
+        "aria-disabled:pointer-events-none aria-disabled:opacity-50",
+        className
+      )}
       nativeButton={false}
       render={
         <a
           aria-current={isActive ? "page" : undefined}
+          aria-disabled={disabled || undefined}
           data-slot="pagination-link"
-          data-active={isActive}
+          data-active={isActive || undefined}
+          href={disabled ? undefined : href}
+          onClick={disabled ? undefined : onClick}
           {...props}
         />
       }
@@ -104,19 +125,48 @@ function PaginationEllipsis({
 }: React.ComponentProps<"span">) {
   return (
     <span
-      aria-hidden
       data-slot="pagination-ellipsis"
-      className={cn(
-        "flex size-9 items-center justify-center [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn("flex size-9 items-center justify-center", className)}
       {...props}
     >
-      <MoreHorizontalIcon
-      />
+      <MoreHorizontalIcon aria-hidden="true" className="size-4" />
       <span className="sr-only">More pages</span>
     </span>
   )
+}
+
+/**
+ * Page numbers to render for a paginated list: the current page plus
+ * `siblingCount` neighbours on each side, always including the first and last
+ * page. Skipped runs are collapsed into an `"ellipsis"` marker.
+ */
+function getPaginationRange(
+  currentPage: number,
+  pageCount: number,
+  siblingCount = 1
+): (number | "ellipsis")[] {
+  const maxWindow = 2 * siblingCount + 5
+
+  if (pageCount <= maxWindow) {
+    return Array.from({ length: pageCount }, (_, index) => index + 1)
+  }
+
+  const windowStart = Math.max(
+    2,
+    Math.min(currentPage - siblingCount, pageCount - maxWindow + 2)
+  )
+  const windowEnd = Math.min(
+    pageCount - 1,
+    Math.max(currentPage + siblingCount, maxWindow - 1)
+  )
+
+  const pages: (number | "ellipsis")[] = [1]
+  if (windowStart > 2) pages.push("ellipsis")
+  for (let page = windowStart; page <= windowEnd; page += 1) pages.push(page)
+  if (windowEnd < pageCount - 1) pages.push("ellipsis")
+  pages.push(pageCount)
+
+  return pages
 }
 
 export {
@@ -127,4 +177,5 @@ export {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  getPaginationRange,
 }

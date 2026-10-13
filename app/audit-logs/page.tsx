@@ -39,6 +39,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  getPaginationRange,
 } from "@/components/ui/pagination";
 import {
   Table,
@@ -253,10 +254,7 @@ export default function AuditLogPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
-  const paginationPages =
-    pageCount <= 4
-      ? Array.from({ length: pageCount }, (_, index) => index + 1)
-      : ([1, 2, "ellipsis", pageCount - 1, pageCount] as const);
+  const paginationPages = getPaginationRange(currentPage, pageCount);
   const visibleLogs = logs;
 
   if (authLoading) return null;
@@ -451,11 +449,7 @@ export default function AuditLogPage() {
                       event.preventDefault();
                       setPage(Math.max(1, currentPage - 1));
                     }}
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : undefined
-                    }
+                    disabled={currentPage === 1}
                   />
                 </PaginationItem>
                 {paginationPages.map((item, index) =>
@@ -485,11 +479,7 @@ export default function AuditLogPage() {
                       event.preventDefault();
                       setPage(Math.min(pageCount, currentPage + 1));
                     }}
-                    className={
-                      currentPage === pageCount
-                        ? "pointer-events-none opacity-50"
-                        : undefined
-                    }
+                    disabled={currentPage === pageCount}
                   />
                 </PaginationItem>
               </PaginationContent>

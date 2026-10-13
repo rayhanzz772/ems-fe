@@ -35,10 +35,12 @@ import {
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  getPaginationRange,
 } from "@/components/ui/pagination";
 import {
   Table,
@@ -157,6 +159,7 @@ export default function PositionPage() {
     : "";
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, pageCount);
+  const paginationPages = getPaginationRange(currentPage, pageCount);
 
   function openCreate() {
     if (!can("position.create")) return;
@@ -463,15 +466,15 @@ export default function PositionPage() {
                       event.preventDefault();
                       setPage(Math.max(1, currentPage - 1));
                     }}
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : undefined
-                    }
+                    disabled={currentPage === 1}
                   />
                 </PaginationItem>
-                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-                  (item) => (
+                {paginationPages.map((item, index) =>
+                  item === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
                     <PaginationItem key={item}>
                       <PaginationLink
                         href="#"
@@ -493,11 +496,7 @@ export default function PositionPage() {
                       event.preventDefault();
                       setPage(Math.min(pageCount, currentPage + 1));
                     }}
-                    className={
-                      currentPage === pageCount
-                        ? "pointer-events-none opacity-50"
-                        : undefined
-                    }
+                    disabled={currentPage === pageCount}
                   />
                 </PaginationItem>
               </PaginationContent>

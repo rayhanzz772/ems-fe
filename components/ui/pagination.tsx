@@ -145,7 +145,7 @@ function getPaginationRange(
   pageCount: number,
   siblingCount = 1
 ): (number | "ellipsis")[] {
-  const maxWindow = 2 * siblingCount + 5
+  const maxWindow = 2 * siblingCount + 3
 
   if (pageCount <= maxWindow) {
     return Array.from({ length: pageCount }, (_, index) => index + 1)

@@ -1470,7 +1470,7 @@ export default function EmployeePage() {
         open={formOpen}
         onOpenChange={(open) => !savingEmployee && setFormOpen(open)}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               {editing ? "Edit employee" : "Add employee"}

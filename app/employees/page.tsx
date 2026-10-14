@@ -33,6 +33,7 @@ import {
   Spinner,
   Switch,
   Skeleton,
+  SelectMenu,
 } from "@/components/ui";
 import {
   Pagination,
@@ -246,6 +247,43 @@ const emptyForm: EmployeeForm = {
   address: "",
   status: true,
 };
+
+const employeeStatusFilterOptions = [
+  { value: "all", label: "All status" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+] as const;
+
+const employmentTypeFilterOptions = [
+  { value: "all", label: "All types" },
+  { value: "PERMANENT", label: "Permanent" },
+  { value: "CONTRACT", label: "Contract" },
+  { value: "INTERN", label: "Intern" },
+] as const;
+
+const employmentStatusFilterOptions = [
+  { value: "all", label: "All employment statuses" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "ON_LEAVE", label: "On leave" },
+  { value: "RESIGNED", label: "Resigned" },
+  { value: "TERMINATED", label: "Terminated" },
+] as const;
+
+const employeeSortOptions = [
+  { value: "created_at", label: "Created date" },
+  { value: "first_name", label: "First name" },
+  { value: "last_name", label: "Last name" },
+  { value: "employee_code", label: "Employee code" },
+  { value: "email", label: "Email" },
+  { value: "department_name", label: "Department" },
+  { value: "position", label: "Position" },
+  { value: "branch_name", label: "Branch" },
+  { value: "employment_type", label: "Employment type" },
+  { value: "employment_status", label: "Employment status" },
+  { value: "status", label: "Status" },
+  { value: "hire_date", label: "Hire date" },
+  { value: "updated_at", label: "Updated date" },
+] as const;
 
 const avatarColors = [
   "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -1093,7 +1131,7 @@ export default function EmployeePage() {
       </Card>
 
       <Dialog open={filtersOpen} onOpenChange={setFiltersOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-h-none">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Filter employees</DialogTitle>
             <DialogDescription>
@@ -1107,78 +1145,72 @@ export default function EmployeePage() {
                 {filterError}
               </p>
             )}
+            <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="employee-status-filter">Status</Label>
-              <select
+              <SelectMenu
                 id="employee-status-filter"
                 value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value);
+                options={employeeStatusFilterOptions}
+                onChange={(value) => {
+                  setStatusFilter(value);
                   setPage(1);
                 }}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="employee-department-filter">Department</Label>
-              <select
+              <SelectMenu
                 id="employee-department-filter"
                 value={departmentFilter}
-                onChange={(event) => {
-                  setDepartmentFilter(event.target.value);
+                options={[
+                  { value: "all", label: "All departments" },
+                  ...departmentOptions.map((department) => ({
+                    value: department.id,
+                    label: department.name,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setDepartmentFilter(value);
                   setPage(1);
                 }}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All departments</option>
-                {departmentOptions.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="employee-branch-filter">Branch</Label>
-              <select
+              <SelectMenu
                 id="employee-branch-filter"
                 value={branchFilter}
-                onChange={(event) => {
-                  setBranchFilter(event.target.value);
+                options={[
+                  { value: "all", label: "All branches" },
+                  ...branchOptions.map((branch) => ({
+                    value: branch.id,
+                    label: branch.name,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setBranchFilter(value);
                   setPage(1);
                 }}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All branches</option>
-                {branchOptions.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="employee-manager-filter">Manager</Label>
-              <select
+              <SelectMenu
                 id="employee-manager-filter"
                 value={managerFilter}
-                onChange={(event) => {
-                  setManagerFilter(event.target.value);
+                options={[
+                  { value: "all", label: "All managers" },
+                  ...managerOptions.map((manager) => ({
+                    value: manager.id,
+                    label: `${fullName(manager)} (${manager.employee_code})`,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setManagerFilter(value);
                   setPage(1);
                 }}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All managers</option>
-                {managerOptions.map((manager) => (
-                  <option key={manager.id} value={manager.id}>
-                    {fullName(manager)} ({manager.employee_code})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="employee-position-filter">Position</Label>
@@ -1197,68 +1229,44 @@ export default function EmployeePage() {
                 <Label htmlFor="employee-employment-type-filter">
                   Employment type
                 </Label>
-                <select
+                <SelectMenu
                   id="employee-employment-type-filter"
                   value={employmentTypeFilter}
-                  onChange={(event) => {
-                    setEmploymentTypeFilter(event.target.value);
+                  options={employmentTypeFilterOptions}
+                  onChange={(value) => {
+                    setEmploymentTypeFilter(value);
                     setPage(1);
                   }}
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="all">All types</option>
-                  <option value="PERMANENT">Permanent</option>
-                  <option value="CONTRACT">Contract</option>
-                  <option value="INTERN">Intern</option>
-                </select>
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="employee-employment-status-filter">
                   Employment status
                 </Label>
-                <select
+                <SelectMenu
                   id="employee-employment-status-filter"
                   value={employmentStatusFilter}
-                  onChange={(event) => {
-                    setEmploymentStatusFilter(event.target.value);
+                  options={employmentStatusFilterOptions}
+                  onChange={(value) => {
+                    setEmploymentStatusFilter(value);
                     setPage(1);
                   }}
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="all">All employment statuses</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="ON_LEAVE">On leave</option>
-                  <option value="RESIGNED">Resigned</option>
-                  <option value="TERMINATED">Terminated</option>
-                </select>
+                />
               </div>
             </div>
+                        </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="employee-sort-filter">Sort by</Label>
-                <select
+                <SelectMenu
                   id="employee-sort-filter"
                   value={sortBy}
-                  onChange={(event) => {
-                    setSortBy(event.target.value);
+                  options={employeeSortOptions}
+                  onChange={(value) => {
+                    setSortBy(value);
                     setPage(1);
                   }}
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="created_at">Created date</option>
-                  <option value="first_name">First name</option>
-                  <option value="last_name">Last name</option>
-                  <option value="employee_code">Employee code</option>
-                  <option value="email">Email</option>
-                  <option value="department_name">Department</option>
-                  <option value="position">Position</option>
-                  <option value="branch_name">Branch</option>
-                  <option value="employment_type">Employment type</option>
-                  <option value="employment_status">Employment status</option>
-                  <option value="status">Status</option>
-                  <option value="hire_date">Hire date</option>
-                  <option value="updated_at">Updated date</option>
-                </select>
+                />
               </div>
               <div className="space-y-2">
                 <Label>Order</Label>
@@ -1300,7 +1308,7 @@ export default function EmployeePage() {
               </div>
             </div>
           </div>
-          <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t bg-background px-6 py-4">
+          <DialogFooter className="bottom-0 -mx-6 -mb-6 px-6 py-4">
             <Button type="button" variant="outline" onClick={clearFilters}>
               Reset filters
             </Button>

@@ -31,6 +31,7 @@ import {
   Spinner,
   Switch,
   Skeleton,
+  SelectMenu,
 } from "@/components/ui";
 import {
   Pagination,
@@ -103,6 +104,12 @@ const emptyForm: UserForm = {
   roleId: "",
   status: true,
 };
+
+const userStatusFilterOptions = [
+  { value: "all", label: "All status" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+] as const;
 
 function normalizeRoleOption(role: RoleRecord): RoleOption | null {
   const id = role.id ?? role.role_id;
@@ -661,22 +668,21 @@ export default function UsersPage() {
               <label htmlFor="user-role-filter" className="text-sm font-medium">
                 Role
               </label>
-              <select
+              <SelectMenu
                 id="user-role-filter"
                 value={roleFilter}
-                onChange={(event) => {
-                  setRoleFilter(event.target.value);
+                options={[
+                  { value: "all", label: "All roles" },
+                  ...availableRoles.map((role) => ({
+                    value: role.name,
+                    label: role.name,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setRoleFilter(value);
                   setPage(1);
                 }}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All roles</option>
-                {availableRoles.map((role) => (
-                  <option key={role.id} value={role.name}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <label
@@ -685,19 +691,15 @@ export default function UsersPage() {
               >
                 Status
               </label>
-              <select
+              <SelectMenu
                 id="user-status-filter"
                 value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value);
+                options={userStatusFilterOptions}
+                onChange={(value) => {
+                  setStatusFilter(value);
                   setPage(1);
                 }}
-                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="all">All status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              />
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-medium">Sort by email</span>

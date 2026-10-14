@@ -175,7 +175,7 @@ export function Header() {
                     aria-label="Open user menu"
                     title="Open user menu"
                   >
-                    <div className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    <div className="flex size-8 items-center justify-center rounded-full bg-button-primary hover:bg-button-primary/90 text-xs font-semibold text-button-text">
                       {userInitials}
                     </div>
                     <span className="hidden text-sm font-medium text-foreground sm:inline">

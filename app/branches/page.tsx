@@ -36,6 +36,7 @@ import {
   Skeleton,
   Spinner,
   Switch,
+  SelectMenu,
 } from "@/components/ui";
 import {
   Pagination,
@@ -93,6 +94,19 @@ type BranchSortField = "name" | "status" | "created_at" | "updated_at";
 
 const emptyForm = { name: "", address: "" };
 const pageSize = 10;
+
+const statusOptions = [
+  { value: "all", label: "All statuses" },
+  { value: "true", label: "Active" },
+  { value: "false", label: "Inactive" },
+] as const;
+
+const sortOptions: { value: BranchSortField; label: string }[] = [
+  { value: "created_at", label: "Created date" },
+  { value: "name", label: "Name" },
+  { value: "status", label: "Status" },
+  { value: "updated_at", label: "Updated date" },
+];
 
 function normalizeBranch(value: BranchApi): Branch {
   const employeeCount = Number(value.employee_count ?? 0);
@@ -364,33 +378,26 @@ export default function BranchesPage() {
                 className="pl-9"
               />
             </div>
-            <select
-              aria-label="Filter by status"
+            <SelectMenu
+              ariaLabel="Filter by status"
+              className="sm:w-44"
               value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value);
+              options={statusOptions}
+              onChange={(value) => {
+                setStatusFilter(value);
                 setPage(1);
               }}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="all">All statuses</option>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-            </select>
-            <select
-              aria-label="Sort branches by"
+            />
+            <SelectMenu
+              ariaLabel="Sort branches by"
+              className="sm:w-44"
               value={sortBy}
-              onChange={(event) => {
-                setSortBy(event.target.value as BranchSortField);
+              options={sortOptions}
+              onChange={(value) => {
+                setSortBy(value as BranchSortField);
                 setPage(1);
               }}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="created_at">Created date</option>
-              <option value="name">Name</option>
-              <option value="status">Status</option>
-              <option value="updated_at">Updated date</option>
-            </select>
+            />
             <Button
               variant="outline"
               className="w-full gap-1 px-2 sm:w-auto"

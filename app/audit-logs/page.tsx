@@ -30,6 +30,7 @@ import {
   DialogTitle,
   Input,
   Skeleton,
+  SelectMenu,
 } from "@/components/ui";
 import {
   Pagination,
@@ -114,6 +115,28 @@ const actionVisuals = {
     badgeClassName: string;
   }
 >;
+
+const auditActionFilterOptions = [
+  { value: "all", label: "All actions" },
+  { value: "CREATE", label: "Create" },
+  { value: "UPDATE", label: "Update" },
+  { value: "DELETE", label: "Delete" },
+] as const;
+
+const auditEntityFilterOptions = [
+  { value: "all", label: "All entities" },
+  { value: "Employee", label: "Employee" },
+  { value: "User", label: "User" },
+  { value: "Department", label: "Department" },
+] as const;
+
+const auditSortOptions = [
+  { value: "created_at", label: "Created date" },
+  { value: "action", label: "Action" },
+  { value: "entity", label: "Entity" },
+  { value: "entity_id", label: "Entity ID" },
+  { value: "user_email", label: "User email" },
+] as const;
 
 function getTotal(
   data: AuditLogListData,
@@ -505,20 +528,15 @@ export default function AuditLogPage() {
                 >
                   Action
                 </label>
-                <select
+                <SelectMenu
                   id="audit-action-filter"
                   value={action}
-                  onChange={(event) => {
-                    setAction(event.target.value);
+                  options={auditActionFilterOptions}
+                  onChange={(value) => {
+                    setAction(value);
                     resetPage();
                   }}
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="all">All actions</option>
-                  <option value="CREATE">Create</option>
-                  <option value="UPDATE">Update</option>
-                  <option value="DELETE">Delete</option>
-                </select>
+                />
               </div>
               <div className="space-y-2">
                 <label
@@ -527,20 +545,15 @@ export default function AuditLogPage() {
                 >
                   Entity
                 </label>
-                <select
+                <SelectMenu
                   id="audit-entity-filter"
                   value={entity}
-                  onChange={(event) => {
-                    setEntity(event.target.value);
+                  options={auditEntityFilterOptions}
+                  onChange={(value) => {
+                    setEntity(value);
                     resetPage();
                   }}
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="all">All entities</option>
-                  <option value="Employee">Employee</option>
-                  <option value="User">User</option>
-                  <option value="Department">Department</option>
-                </select>
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -568,21 +581,15 @@ export default function AuditLogPage() {
                 >
                   Sort by
                 </label>
-                <select
+                <SelectMenu
                   id="audit-sort-filter"
                   value={sortBy}
-                  onChange={(event) => {
-                    setSortBy(event.target.value);
+                  options={auditSortOptions}
+                  onChange={(value) => {
+                    setSortBy(value);
                     resetPage();
                   }}
-                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                >
-                  <option value="created_at">Created date</option>
-                  <option value="action">Action</option>
-                  <option value="entity">Entity</option>
-                  <option value="entity_id">Entity ID</option>
-                  <option value="user_email">User email</option>
-                </select>
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Order</label>

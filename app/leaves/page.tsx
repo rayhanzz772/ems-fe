@@ -32,6 +32,7 @@ import {
   Skeleton,
   Spinner,
   Textarea,
+  SelectMenu,
 } from "@/components/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { AccessDenied } from "@/components/access-denied";
@@ -129,6 +130,12 @@ const emptyForm: LeaveForm = {
 };
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const calendarStatusOptions = [
+  { value: "ALL", label: "All statuses" },
+  { value: "PENDING", label: "Pending" },
+  { value: "APPROVED", label: "Approved" },
+] as const;
 
 function toDateKey(date: Date) {
   const year = date.getFullYear();
@@ -587,18 +594,13 @@ export default function LeavesPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <select
-                aria-label="Filter calendar by status"
+              <SelectMenu
+                ariaLabel="Filter calendar by status"
+                className="w-40"
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as StatusFilter)
-                }
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="ALL">All statuses</option>
-                <option value="PENDING">Pending</option>
-                <option value="APPROVED">Approved</option>
-              </select>
+                options={calendarStatusOptions}
+                onChange={(value) => setStatusFilter(value as StatusFilter)}
+              />
               <Button
                 variant="outline"
                 size="sm"

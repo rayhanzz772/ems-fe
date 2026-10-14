@@ -31,6 +31,7 @@ import {
   Skeleton,
   Spinner,
   Textarea,
+  SelectMenu,
 } from "@/components/ui";
 import {
   Pagination,
@@ -84,6 +85,12 @@ type PositionSortField = "name" | "created_at" | "updated_at";
 
 const emptyForm = { name: "", description: "" };
 const pageSize = 10;
+
+const positionSortOptions = [
+  { value: "created_at", label: "Created date" },
+  { value: "name", label: "Name" },
+  { value: "updated_at", label: "Updated date" },
+] as const;
 
 function normalizePosition(value: PositionApi): Position {
   return {
@@ -314,19 +321,16 @@ export default function PositionPage() {
                 className="pl-9"
               />
             </div>
-            <select
-              aria-label="Sort positions by"
+            <SelectMenu
+              ariaLabel="Sort positions by"
+              className="sm:w-44"
               value={sortBy}
-              onChange={(event) => {
-                setSortBy(event.target.value as PositionSortField);
+              options={positionSortOptions}
+              onChange={(value) => {
+                setSortBy(value as PositionSortField);
                 setPage(1);
               }}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="created_at">Created date</option>
-              <option value="name">Name</option>
-              <option value="updated_at">Updated date</option>
-            </select>
+            />
             <Button
               variant="outline"
               className="w-full gap-1 px-2 sm:w-auto"

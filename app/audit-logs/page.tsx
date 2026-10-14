@@ -297,7 +297,7 @@ export default function AuditLogPage() {
         {can("audit_log.export") && (
           <Button
             className="w-full sm:w-auto"
-            variant="outline"
+            variant="csv"
             onClick={exportCsv}
           >
             <Download /> Export CSV

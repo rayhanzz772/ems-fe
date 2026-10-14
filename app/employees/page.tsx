@@ -831,7 +831,7 @@ export default function EmployeePage() {
           {can("employee.export") && (
             <Button
               className="w-full sm:w-auto"
-              variant="outline"
+              variant="csv"
               onClick={exportCsv}
               disabled={exporting}
             >

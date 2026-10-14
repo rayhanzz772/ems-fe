@@ -254,19 +254,27 @@ const employeeStatusFilterOptions = [
   { value: "inactive", label: "Inactive" },
 ] as const;
 
-const employmentTypeFilterOptions = [
-  { value: "all", label: "All types" },
+const employmentTypeOptions = [
   { value: "PERMANENT", label: "Permanent" },
   { value: "CONTRACT", label: "Contract" },
   { value: "INTERN", label: "Intern" },
 ] as const;
 
-const employmentStatusFilterOptions = [
-  { value: "all", label: "All employment statuses" },
+const employmentStatusOptions = [
   { value: "ACTIVE", label: "Active" },
   { value: "ON_LEAVE", label: "On leave" },
   { value: "RESIGNED", label: "Resigned" },
   { value: "TERMINATED", label: "Terminated" },
+] as const;
+
+const employmentTypeFilterOptions = [
+  { value: "all", label: "All types" },
+  ...employmentTypeOptions,
+] as const;
+
+const employmentStatusFilterOptions = [
+  { value: "all", label: "All employment statuses" },
+  ...employmentStatusOptions,
 ] as const;
 
 const employeeSortOptions = [
@@ -376,6 +384,7 @@ export default function EmployeePage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState("");
   const [selected, setSelected] = useState<Employee | null>(null);
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
@@ -619,6 +628,8 @@ export default function EmployeePage() {
   }
 
   async function openDetail(employee: Employee) {
+    if (detailLoadingId) return;
+    setDetailLoadingId(employee.id);
     try {
       const response = await api.get<ApiResponse<EmployeeApi>>(
         `/employees/${encodeURIComponent(employee.id)}/detail`,
@@ -631,6 +642,8 @@ export default function EmployeePage() {
           ? requestError.message
           : "Unable to load employee details.",
       );
+    } finally {
+      setDetailLoadingId(null);
     }
   }
 
@@ -977,9 +990,6 @@ export default function EmployeePage() {
                       <TableCell>
                         <Skeleton className="ml-auto h-8 w-20" />
                       </TableCell>
-                      <TableCell>
-                        <Skeleton className="ml-auto h-8 w-20" />
-                      </TableCell>
                     </TableRow>
                   ))}
                 {visibleEmployees.map((employee, index) => (
@@ -990,14 +1000,17 @@ export default function EmployeePage() {
                     <TableCell>
                       <button
                         type="button"
-                        className="flex items-center gap-3 text-left"
-                        onClick={() => void openDetail(employee)}
+                        className="flex items-center gap-3 text-left disabled:cursor-wait disabled:opacity-60"
+                        disabled={detailLoadingId === employee.id}
+                        aria-busy={detailLoadingId === employee.id}
                       >
                         <span
-                          className={`flex size-9 items-center justify-center rounded-full text-sm font-semibold ${getAvatarColor(employee.email)}`}
+                          className={`relative flex size-9 items-center justify-center rounded-full text-sm font-semibold uppercase ${getAvatarColor(employee.email)}`}
                         >
-                          {employee.first_name[0]}
-                          {employee.last_name[0]}
+                          <span>
+                            {employee.first_name[0]}
+                            {employee.last_name[0]}
+                          </span>
                         </span>
                         <span>
                           <span className="block font-medium hover:underline">
@@ -1024,9 +1037,11 @@ export default function EmployeePage() {
                         active={employee.status}
                         disabled={
                           !can("employee.update") ||
-                          updatingStatusIds.has(employee.id)
+                          updatingStatusIds.has(employee.id) ||
+                          detailLoadingId === employee.id
                         }
                         onClick={() => void toggleStatus(employee)}
+                        aria-busy={detailLoadingId === employee.id}
                       />
                     </TableCell>
                     <TableCell>
@@ -1035,14 +1050,22 @@ export default function EmployeePage() {
                           variant="ghost"
                           size="icon-sm"
                           title="View details"
+                          disabled={detailLoadingId === employee.id}
+                          aria-busy={detailLoadingId === employee.id}
                           onClick={() => void openDetail(employee)}
                         >
-                          <Eye />
+                          {detailLoadingId === employee.id ? (
+                            <Spinner className="size-4" />
+                          ) : (
+                            <Eye />
+                          )}
                         </Button>
                         {can("employee.update") && (
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            disabled={detailLoadingId === employee.id}
+                            aria-busy={detailLoadingId === employee.id}
                             title="Edit employee"
                             onClick={() => openEdit(employee)}
                           >
@@ -1053,6 +1076,8 @@ export default function EmployeePage() {
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            disabled={detailLoadingId === employee.id}
+                            aria-busy={detailLoadingId === employee.id}
                             title="Delete employee"
                             onClick={() => setDeleteTarget(employee)}
                           >
@@ -1555,136 +1580,116 @@ export default function EmployeePage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="department">Department</Label>
-              <select
+              <SelectMenu
                 id="department"
-                required
                 value={form.department_id}
-                onChange={(event) => {
-                  setForm({ ...form, department_id: event.target.value });
+                placeholder="Select Department"
+                options={departmentOptions.map((department) => ({
+                  value: department.id,
+                  label: department.name,
+                }))}
+                onChange={(value) => {
+                  setForm({ ...form, department_id: value });
                   setActionError("");
                 }}
-                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="" disabled>
-                  Select Department
-                </option>
-                {departmentOptions.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="position-id">Position</Label>
-              <select
+              <SelectMenu
                 id="position-id"
-                required
                 value={form.position_id}
-                onChange={(event) => {
-                  setForm({ ...form, position_id: event.target.value });
+                placeholder="Select Position"
+                options={positionOptions.map((position) => ({
+                  value: position.id,
+                  label: position.name,
+                }))}
+                onChange={(value) => {
+                  setForm({ ...form, position_id: value });
                   setActionError("");
                 }}
-                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="" disabled>
-                  Select Position
-                </option>
-                {positionOptions.map((position) => (
-                  <option key={position.id} value={position.id}>
-                    {position.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="branch-id">Branch (optional)</Label>
-              <select
+              <Label htmlFor="branch-id">Branch</Label>
+              <SelectMenu
                 id="branch-id"
                 value={form.branch_id}
-                onChange={(event) => {
-                  setForm({ ...form, branch_id: event.target.value });
-                  setActionError("");
-                }}
-                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="">No branch</option>
-                {form.branch_id &&
+                placeholder="No branch"
+                options={[
+                  { value: "", label: "No branch" },
+                  ...(form.branch_id &&
                   !branchOptions.some(
                     (branch) => branch.id === form.branch_id,
-                  ) && (
-                    <option value={form.branch_id}>
-                      Current branch (unavailable)
-                    </option>
-                  )}
-                {branchOptions.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
+                  )
+                    ? [
+                        {
+                          value: form.branch_id,
+                          label: "Current branch (unavailable)",
+                        },
+                      ]
+                    : []),
+                  ...branchOptions.map((branch) => ({
+                    value: branch.id,
+                    label: branch.name,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setForm({ ...form, branch_id: value });
+                  setActionError("");
+                }}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="manager-id">Manager (optional)</Label>
-              <select
+              <SelectMenu
                 id="manager-id"
                 value={form.manager_id}
-                onChange={(event) => {
-                  setForm({ ...form, manager_id: event.target.value });
+                placeholder="No manager"
+                options={[
+                  { value: "", label: "No manager" },
+                  ...managerOptions
+                    .filter((manager) => manager.id !== editing?.id)
+                    .map((manager) => ({
+                      value: manager.id,
+                      label: `${fullName(manager)} (${manager.employee_code})`,
+                    })),
+                ]}
+                onChange={(value) => {
+                  setForm({ ...form, manager_id: value });
                   setActionError("");
                 }}
-                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="">No manager</option>
-                {managerOptions
-                  .filter((manager) => manager.id !== editing?.id)
-                  .map((manager) => (
-                    <option key={manager.id} value={manager.id}>
-                      {fullName(manager)} ({manager.employee_code})
-                    </option>
-                  ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="employment-type">Employment type</Label>
-              <select
+              <SelectMenu
                 id="employment-type"
-                required
                 value={form.employment_type}
-                onChange={(event) => {
+                options={employmentTypeOptions}
+                onChange={(value) => {
                   setForm({
                     ...form,
-                    employment_type: event.target.value as EmploymentType,
+                    employment_type: value as EmploymentType,
                   });
                   setActionError("");
                 }}
-                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="PERMANENT">Permanent</option>
-                <option value="CONTRACT">Contract</option>
-                <option value="INTERN">Intern</option>
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="employment-status">Employment status</Label>
-              <select
+              <SelectMenu
                 id="employment-status"
-                required
                 value={form.employment_status}
-                onChange={(event) => {
+                options={employmentStatusOptions}
+                onChange={(value) => {
                   setForm({
                     ...form,
-                    employment_status: event.target.value as EmploymentStatus,
+                    employment_status: value as EmploymentStatus,
                   });
                   setActionError("");
                 }}
-                className="flex h-9 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="ACTIVE">Active</option>
-                <option value="ON_LEAVE">On leave</option>
-                <option value="RESIGNED">Resigned</option>
-                <option value="TERMINATED">Terminated</option>
-              </select>
+              />
             </div>
             {form.employment_type === "CONTRACT" && (
               <>

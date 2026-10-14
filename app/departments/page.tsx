@@ -130,6 +130,7 @@ export default function DepartmentPage() {
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Department | null>(null);
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Department | null>(null);
   const [form, setForm] = useState(emptyDepartment);
   const [formOpen, setFormOpen] = useState(false);
@@ -208,7 +209,8 @@ export default function DepartmentPage() {
   }
 
   async function openDetail(department: Department) {
-    setDeleteError("");
+    if (detailLoadingId) return;
+    setDetailLoadingId(department.id);
     try {
       const response = await api.get<
         ApiResponse<DepartmentApi | DepartmentApi[]>
@@ -227,6 +229,8 @@ export default function DepartmentPage() {
           ? requestError.message
           : "Unable to load department details.",
       );
+    } finally {
+      setDetailLoadingId(null);
     }
   }
 
@@ -415,6 +419,9 @@ export default function DepartmentPage() {
                         <Skeleton className="h-6 w-20 rounded-full" />
                       </TableCell>
                       <TableCell>
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                      </TableCell>
+                      <TableCell>
                         <Skeleton className="ml-auto h-8 w-20" />
                       </TableCell>
                     </TableRow>
@@ -430,11 +437,6 @@ export default function DepartmentPage() {
                         className="flex items-center gap-3 text-left"
                         onClick={() => void openDetail(department)}
                       >
-                        <span
-                          className={`flex size-9 items-center justify-center rounded-full text-sm font-semibold ${getAvatarColor(department.name)}`}
-                        >
-                          {department.name.slice(0, 2).toUpperCase()}
-                        </span>
                         <span className="font-medium hover:underline">
                           {department.name}
                         </span>
@@ -449,10 +451,12 @@ export default function DepartmentPage() {
                         checked={department.status}
                         disabled={
                           currentUserRole !== "ADMIN" ||
-                          updatingStatusIds.has(department.id)
+                          updatingStatusIds.has(department.id) ||
+                          detailLoadingId === department.id
                         }
                         onCheckedChange={() => void toggleStatus(department)}
                         aria-label={`Turn department status ${department.status ? "off" : "on"}`}
+                        aria-busy={detailLoadingId === department.id}
                       />
                     </TableCell>
                     <TableCell>
@@ -460,14 +464,22 @@ export default function DepartmentPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
+                          disabled={detailLoadingId === department.id}
+                          aria-busy={detailLoadingId === department.id}
                           title="View details"
                           onClick={() => void openDetail(department)}
                         >
-                          <Eye />
+                          {detailLoadingId === department.id ? (
+                            <Spinner className="size-4" />
+                          ) : (
+                            <Eye />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon-sm"
+                          disabled={detailLoadingId === department.id}
+                          aria-busy={detailLoadingId === department.id}
                           title="Edit department"
                           onClick={() => openEdit(department)}
                         >
@@ -476,6 +488,8 @@ export default function DepartmentPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
+                          disabled={detailLoadingId === department.id}
+                          aria-busy={detailLoadingId === department.id}
                           title="Delete department"
                           onClick={() => setDeleteTarget(department)}
                         >

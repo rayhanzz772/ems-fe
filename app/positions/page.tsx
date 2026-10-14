@@ -115,6 +115,7 @@ export default function PositionPage() {
   const [sortBy, setSortBy] = useState<PositionSortField>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(1);
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Position | null>(null);
   const [editing, setEditing] = useState<Position | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -185,7 +186,8 @@ export default function PositionPage() {
   }
 
   async function openDetail(position: Position) {
-    setActionError("");
+    if (detailLoadingId) return;
+    setDetailLoadingId(position.id);
     try {
       const response = await api.get<ApiResponse<PositionApi | PositionApi[]>>(
         `/positions/${encodeURIComponent(position.id)}/detail`,
@@ -205,6 +207,8 @@ export default function PositionPage() {
           : "Unable to load position details.";
       setActionError(message);
       showError("Unable to load position details", message);
+    } finally{
+      setDetailLoadingId(null);
     }
   }
 
@@ -410,15 +414,23 @@ export default function PositionPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
+                          disabled={detailLoadingId === position.id}
+                          aria-busy={detailLoadingId === position.id}
                           title="View details"
                           onClick={() => void openDetail(position)}
                         >
-                          <Eye />
+                          {detailLoadingId === position.id ? (
+                            <Spinner className="size-4" />
+                          ) : (
+                            <Eye />
+                          )}
                         </Button>
                         {can("position.update") && (
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            disabled={detailLoadingId === position.id}
+                            aria-busy={detailLoadingId === position.id}
                             title="Edit position"
                             onClick={() => openEdit(position)}
                           >
@@ -429,6 +441,8 @@ export default function PositionPage() {
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            disabled={detailLoadingId === position.id}
+                            aria-busy={detailLoadingId === position.id}
                             title="Delete position"
                             onClick={() => {
                               setActionError("");

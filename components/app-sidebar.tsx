@@ -250,7 +250,7 @@ export function AppSidebar() {
                           isActive={active}
                           tooltip={item.title}
                           className={cn(
-                            "relative group/btn transition-all duration-150",
+                            "relative group/btn transition-all duration-150 text-primary/90",
                             active && "font-normal",
                           )}
                         >

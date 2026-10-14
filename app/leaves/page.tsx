@@ -1053,47 +1053,37 @@ export default function LeavesPage() {
             )}
             <div className="space-y-2">
               <Label htmlFor="leave-employee">Employee</Label>
-              <select
+              <SelectMenu
                 id="leave-employee"
-                required
                 value={form.employeeId}
-                onChange={(event) =>
-                  setForm({ ...form, employeeId: event.target.value })
-                }
+                placeholder="Select employee"
                 disabled={!activeEmployees.length || employeeQuery.isPending}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="">Select employee</option>
-                {activeEmployees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.first_name} {employee.last_name}
-                    {employee.employee_code
+                options={activeEmployees.map((employee) => ({
+                  value: employee.id,
+                  label: `${employee.first_name} ${employee.last_name}${
+                    employee.employee_code
                       ? ` (${employee.employee_code})`
-                      : ""}
-                  </option>
-                ))}
-              </select>
+                      : ""
+                  }`,
+                }))}
+                onChange={(value) => setForm({ ...form, employeeId: value })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="leave-type">Leave type</Label>
-              <select
+              <SelectMenu
                 id="leave-type"
-                required
                 value={form.leaveTypeId}
-                onChange={(event) =>
-                  setForm({ ...form, leaveTypeId: event.target.value })
-                }
+                placeholder="Select leave type"
                 disabled={!activeLeaveTypes.length || typeQuery.isPending}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="">Select leave type</option>
-                {activeLeaveTypes.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                    {type.requires_balance ? " · balance required" : ""}
-                  </option>
-                ))}
-              </select>
+                options={activeLeaveTypes.map((type) => ({
+                  value: type.id,
+                  label: `${type.name}${
+                    type.requires_balance ? " · balance required" : ""
+                  }`,
+                }))}
+                onChange={(value) => setForm({ ...form, leaveTypeId: value })}
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

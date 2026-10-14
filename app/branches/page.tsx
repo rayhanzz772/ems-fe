@@ -138,6 +138,7 @@ export default function BranchesPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Branch | null>(null);
   const [editing, setEditing] = useState<Branch | null>(null);
+  const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
   const [savingBranch, setSavingBranch] = useState(false);
@@ -210,7 +211,8 @@ export default function BranchesPage() {
   }
 
   async function openDetail(branch: Branch) {
-    setActionError("");
+    if (detailLoadingId) return;
+    setDetailLoadingId(branch.id);
     try {
       const response = await api.get<ApiResponse<BranchApi | BranchApi[]>>(
         `/branches/${encodeURIComponent(branch.id)}/detail`,
@@ -230,6 +232,8 @@ export default function BranchesPage() {
           : "Unable to load branch details.";
       setActionError(message);
       showError("Unable to load branch details", message);
+    } finally {
+      setDetailLoadingId(null);
     }
   }
 
@@ -477,10 +481,12 @@ export default function BranchesPage() {
                         checked={branch.status}
                         disabled={
                           !can("branch.update") ||
-                          updatingStatusIds.has(branch.id)
+                          updatingStatusIds.has(branch.id) ||
+                          detailLoadingId === branch.id
                         }
                         onCheckedChange={() => void toggleStatus(branch)}
                         aria-label={`Turn branch status ${branch.status ? "off" : "on"}`}
+                        aria-busy={detailLoadingId === branch.id}
                       />
                     </TableCell>
                     <TableCell>
@@ -488,15 +494,23 @@ export default function BranchesPage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
+                          disabled={detailLoadingId === branch.id}
+                          aria-busy={detailLoadingId === branch.id}
                           title="View details"
                           onClick={() => void openDetail(branch)}
                         >
-                          <Eye />
+                          {detailLoadingId === branch.id ? (
+                            <Spinner className="size-4" />
+                          ) : (
+                            <Eye />
+                          )}
                         </Button>
                         {can("branch.update") && (
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            disabled={detailLoadingId === branch.id}
+                            aria-busy={detailLoadingId === branch.id}
                             title="Edit branch"
                             onClick={() => openEdit(branch)}
                           >
@@ -507,6 +521,8 @@ export default function BranchesPage() {
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            disabled={detailLoadingId === branch.id}
+                            aria-busy={detailLoadingId === branch.id}
                             title="Delete branch"
                             onClick={() => {
                               setActionError("");

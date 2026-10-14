@@ -527,11 +527,6 @@ export default function UsersPage() {
                             className="flex items-center gap-3 text-left"
                             onClick={() => setSelected(user)}
                           >
-                            <span
-                              className={`flex size-9 items-center justify-center rounded-full text-sm font-semibold ${getAvatarColor(user.email)}`}
-                            >
-                              {user.email[0]?.toUpperCase()}
-                            </span>
                             <span className="font-medium hover:underline">
                               {user.email}
                             </span>

@@ -666,7 +666,7 @@ export default function AuditLogPage() {
         open={Boolean(selected)}
         onOpenChange={(open) => !open && setSelected(null)}
       >
-        <DialogContent className="w-[calc(100%-2rem)] max-w-6xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Audit activity details</DialogTitle>
             <DialogDescription>
